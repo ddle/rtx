@@ -107,19 +107,15 @@ osThreadDef(threadX, osPriorityNormal, 1, 0);
 void threadX (void const *argument) {
 	int ret;
 	for (;;) {
-		/* Wait for completion of do-this */
-		//osSignalWait(0x0004, osWaitForever); /* do-that */
-		/* Pause for 20 ms until signaling event to main thread */
+		/* Wait for signal or timeout */
+		//osSignalWait(0x0004, osWaitForever);
+		//LCD_clear_display(LCD_NO_FRAME_INVERSION);
+		osDelay(40);
 
-		osDelay(25);
-		//GPIOF->ODR ^= 0x00000040;
-		//digitalWrite(GPIOF,GPIO_Pin_6, HIGH);
-		//osDelay(1000);
-		//digitalWrite(GPIOF,GPIO_Pin_6, LOW);
-
-		ret = LCD_update_data(LCD_FRAME_INVERSION);
+		//ret = LCD_update_data(LCD_NO_FRAME_INVERSION);
+		ret = LCD_send_rows(0, LCD_PIXEL_HEIGHT - 1,LCD_NO_FRAME_INVERSION);
 		if (ret == STATUS_LCD_DATA_UPDATED)
-			LCD_display_data(LCD_FRAME_INVERSION);
+			LCD_display_data(LCD_NO_FRAME_INVERSION);
 
 		/* Indicate to main thread completion of do-that */
 		//osSignalSet(main_id, 0x0004);
@@ -132,18 +128,9 @@ void threadX (void const *argument) {
  *---------------------------------------------------------------------------*/
 
 int main (void) {
-	//GPIO_InitTypeDef GPIO_InitStructure;
-	///* GPIOD Periph clock enable */
-	////RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOF, ENABLE);
-	///* Configure PD0 and PD2 in output pushpull mode */
-	//GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
-	////GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	//GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	//GPIO_Init(GPIOF, &GPIO_InitStructure);
-
 	//GPIO_Configuration();
-	uint16_t x = 0, y= 0;
-	pinMode(GPIOF,GPIO_Pin_6,GPIO_Mode_Out_PP,GPIO_Speed_50MHz,RCC_APB2Periph_GPIOF);
+	uint16_t x = 100, y= 100;
+	//pinMode(GPIOF,GPIO_Pin_6,GPIO_Mode_Out_PP,GPIO_Speed_50MHz,RCC_APB2Periph_GPIOF);
 
 	/* If the LCD Panel has a resolution of 320x240 this command is not needed, it's set by default */
 	/* Set_LCD_Resolution( 320, 240 ); */
@@ -155,25 +142,64 @@ int main (void) {
 
 	/* Get main thread ID */
 	main_id = osThreadGetId();
-
+	// uint32_t tick;
+	// int ret;
 	/* Create thread X */
 	threadX_id = osThreadCreate(osThread(threadX), NULL);
+	GL_SetTextColor(GL_Black);
+	GL_SetBackColor(GL_White);
+
+	Point pts [3];
+	pts[0].X = 0;
+	pts[0].Y = 0;
+	pts[1].X = 50;
+	pts[1].Y = 100;
+	pts[2].X = LCD_PIXEL_WIDTH;
+	pts[2].Y = 0;
+	pPoint pp = &pts;
+
+	// effect only strings
+	LCD_Change_Direction(_90_degree);
+	//GL_SetFont(GL_FONT_BIG);
+	/* Indicate to thread X completion of do-this */
+			//osSignalSet(threadX_id, 0x0004);
 	for (;;) {    /* do-this */
-		/* Indicate to thread X completion of do-this */
-		//osSignalSet(threadX_id, 0x0004);
+
 		/* Wait for completion of do-that */
 		//osSignalWait(0x0004, osWaitForever);
-		/* Wait now for 50 ms */
-		LCD_clear_display(LCD_NO_FRAME_INVERSION);
-		GL_LCD_DrawRect(x++,y++,50,50);
-		GL_LCD_DrawCircle(x,y,50);
+
+		//tick = osKernelSysTick();
+		//LCD_clear_display(LCD_NO_FRAME_INVERSION);
+
+		//delta = osKernelSysTick() - tick;
+		//delta = delta >> 6;
+		//delta++;
+		//LCD_clear_rows(y- 3 -50,y - 3 );
+
+		GL_Clear(GL_BackColor);
+		LCD_DrawRect(x,y,50,100);
+		GL_LCD_DrawCircle(x,y,25);
+		LCD_PrintStringLine(x,y,"ABCD");
+		LCD_DrawLine(x,y,200,Horizontal);
+		LCD_DrawFullRect(x,y,25,25);
+		LCD_DrawFullCircle(x,y,10);
+
+		LCD_DrawUniLine(x,y,0,200);
+		pts[1].X = x;
+		pts[1].Y = y;
+		LCD_PolyLine(pp,3);
+
+		x = x + 4;
+		y = y + 4;
+
+		//osSignalSet(threadX_id, 0x0004);
+
 		if (y == 240)
 		{
 			x = 0;
 			y = 0;
 		}
-		//GL_LCD_DrawChar(x,y,"A");
-		osDelay(500);
+		osDelay(60);
 
 	}
 }

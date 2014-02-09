@@ -67,7 +67,7 @@ void GPIO_Configuration(void)
 
 uint8_t digitalRead(GPIO_TypeDef * port, uint16_t pin)
 {
-	return ((port->IDR) & (1<<pin) && 1);
+	return (((port->IDR) & (1<<pin)) && 1);
 }
 
 void pinMode(GPIO_TypeDef * port, uint16_t pin, GPIOMode_TypeDef mode, GPIOSpeed_TypeDef speed, uint32_t rcc_per_port)
@@ -177,15 +177,15 @@ void shiftOut(GPIO_TypeDef * dataPort, uint16_t dataPin, GPIO_TypeDef * clockPor
 		if (bitOrder == LSBFIRST)
 		{
 			digitalWrite(dataPort, dataPin, !!(val & (1 << i)));
-			__NOP();__NOP();__NOP();
+			__NOP();__NOP();
 		}
 		else
 		{
 			digitalWrite(dataPort, dataPin, !!(val & (1 << (7 - i))));
-			__NOP();__NOP();__NOP();
+			__NOP();__NOP();
 		}
 
-		digitalWrite(clockPort, clockPin, HIGH);__NOP();__NOP();__NOP();
-		digitalWrite(clockPort, clockPin, LOW);__NOP();__NOP();__NOP();
+		digitalWrite(clockPort, clockPin, HIGH);__NOP();__NOP();
+		digitalWrite(clockPort, clockPin, LOW);__NOP();__NOP();
 	}
 }

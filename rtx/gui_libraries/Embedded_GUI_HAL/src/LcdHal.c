@@ -84,7 +84,7 @@ LCD_HW_Parameters_TypeDef pLcdHwParam;
 #endif
 
 #if !defined(LCDType)
-  __IO uint32_t LCDType = LCD_ILI9320;
+  __IO uint32_t LCDType = 0xff;
 #else
   extern __IO uint32_t LCDType;
 #endif
@@ -137,6 +137,7 @@ void GL_SetBackColor(__IO uint16_t GL_NewBackColor)
   * @brief  Clears the whole LCD.
   * @param  Color: specifies the Background color code RGB(5-6-5) for the Display.
   * @retval None
+  * XXX: driver specific implementation needed
   */
 void GL_Clear(uint16_t Color)
 {
@@ -150,6 +151,7 @@ void GL_Clear(uint16_t Color)
   * @param  Ypos: start column address.
   * @param  c: pointer to the character data.
   * @retval None
+  * TODO: driver specific implementation needed
   */
 void GL_LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
 {
@@ -186,6 +188,8 @@ void GL_LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
   * @param  *ptr: pointer to the string to display on LCD.
   * @param  Transparent_Flag: if TRUE the character is printed without changing the background
   * @retval None
+  * TODO: driver specific implementation needed
+  *
   */
 void GL_DisplayAdjStringLine(uint16_t Line, uint16_t Column, uint8_t *ptr, GL_bool Transparent_Flag)
 {
@@ -278,6 +282,7 @@ void GL_DrawLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint8_t Directio
   * @param  Height: display rectangle height.
   * @param  Width: display rectangle width.
   * @retval None
+  * XXX: driver specific implementation needed
   */
 void GL_LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
 {
@@ -286,7 +291,7 @@ void GL_LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Widt
 //
 //  GL_DrawLine(Xpos, Ypos, Height, Vertical);
 //  GL_DrawLine(Xpos, (Ypos - Width + 1), Height, Vertical);
-	LCD_DrawRect(Xpos,Ypos,Height,Width);
+  LCD_DrawRect(Xpos,Ypos,Height,Width);
 }
 
 /**
@@ -431,6 +436,8 @@ void GL_BackLightSwitch(uint8_t u8_State)
   * @brief  Initializes the LCD.
   * @param  None
   * @retval None
+  *
+  * XXX: driver specific implementation needed
   */
 void GL_LCD_Init(void)
 {
@@ -693,39 +700,40 @@ void LCD_WriteRAMWord(uint16_t RGB_Code)
   *     @arg  _180_degree
   *     @arg  _270_degree
   * @retval None
+  * XXX: driver specific implementation needed
   */
 void LCD_Change_Direction(LCD_Direction_TypeDef Direction)
 {
   LCD_Direction = Direction;
 
-  if (LCD_Direction == _0_degree)
-  {
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1018);
-  }
-  else if (LCD_Direction == _90_degree)
-  {
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=11 (Horizontal : increment, Vertical : increment) */
-    /* AM=0 (address is updated in orizontal writing direction) */
-    LCD_WriteReg(R3, 0x1030);
-  }
-  else if (LCD_Direction == _180_degree)
-  {
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1028);
-  }
-  else if (LCD_Direction == _270_degree)
-  {
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
-    /* AM=0 (address is updated in orizontal writing direction) */
-    LCD_WriteReg(R3, 0x1000);
-  }
+//  if (LCD_Direction == _0_degree)
+//  {
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1018);
+//  }
+//  else if (LCD_Direction == _90_degree)
+//  {
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=11 (Horizontal : increment, Vertical : increment) */
+//    /* AM=0 (address is updated in orizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1030);
+//  }
+//  else if (LCD_Direction == _180_degree)
+//  {
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1028);
+//  }
+//  else if (LCD_Direction == _270_degree)
+//  {
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
+//    /* AM=0 (address is updated in orizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1000);
+//  }
 }
 
 /**
@@ -734,6 +742,7 @@ void LCD_Change_Direction(LCD_Direction_TypeDef Direction)
   * @param  Ypos: The Y axis position
   * @param  *c:   The Character pointer
   * @retval None
+  * XXX: driver specific implementation needed
   */
 void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
 {
@@ -754,10 +763,10 @@ void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
 
   for (index = 0; index < GL_FontHeight; index++)
   {
-    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-    {
-      LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
-    }
+//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//    {
+//      LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
+//    }
     for (counter = 0; counter < GL_FontWidth; counter++)
     {
       /* SmallFonts have bytes in reverse order */
@@ -770,13 +779,35 @@ void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
       {
         LCD_WriteRAM(GL_TextColor);
       }
+
+      if (LCD_Direction == _0_degree)
+      {
+    	  //Xaddress++;
+    	  LCD_SetCursor(Xaddress, Ypos - counter); /// TODO: need to correct drawing direction
+      }
+      else if (LCD_Direction == _90_degree)
+      {
+    	  //Yaddress++;
+    	  LCD_SetCursor(Xpos + counter, Yaddress);
+      }
+      else if (LCD_Direction == _180_degree)
+      {
+    	  //Xaddress--;
+    	  LCD_SetCursor(Xaddress, Ypos + counter);
+      }
+      else if (LCD_Direction == _270_degree)
+      {
+    	  //Yaddress--;
+    	  LCD_SetCursor(Xpos - counter, Yaddress);
+      }
+
     }
 
-    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-    {
-      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
-        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
-    }
+//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//    {
+//      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+//        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+//    }
 
     if (LCD_Direction == _0_degree)
     {

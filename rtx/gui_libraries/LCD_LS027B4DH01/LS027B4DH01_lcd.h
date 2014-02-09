@@ -308,7 +308,7 @@ typedef struct
 /*
  * ram buffer, will be protected with mutex during thread executions
  * */
-extern uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1];
+//extern uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1];
 
 /**
   * @}
@@ -329,10 +329,15 @@ extern uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1];
   * @{
   */ 
 
-void LCD_clear_display(uint8_t frame_inversion);
 void LCD_display_data(uint8_t frame_inversion);
-int LCD_update_data(uint8_t frame_inversion);
-void LCD_update_one_line(uint8_t line, uint8_t frame_inversion);
+//int LCD_update_data(uint8_t frame_inversion);
+void LCD_send_one_row(uint8_t line, uint8_t frame_inversion);
+int LCD_send_rows(uint16_t from, uint16_t to, uint8_t frame_inversion);
+void LCD_clear_row(uint16_t row,uint16_t Color);
+void LCD_clear_rows(uint16_t from, uint16_t to,uint16_t Color);
+void LCD_clear_display(uint16_t Color);
+void LCD_Clear(uint16_t Color);
+
 
 void LCD_DeInit(void);
 void LCD_Setup(void);
@@ -342,7 +347,6 @@ void LCD_GetColors(__IO uint16_t *_TextColor, __IO uint16_t *_BackColor);
 void LCD_SetTextColor(__IO uint16_t Color);
 void LCD_SetBackColor(__IO uint16_t Color);
 void LCD_ClearLine(uint8_t Line);
-void LCD_Clear(uint16_t Color);
 void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos);
 void LCD_DrawChar(uint8_t Xpos, uint16_t Ypos, const uint16_t *c);
 void LCD_DisplayChar(uint8_t Line, uint16_t Column, uint8_t Ascii);

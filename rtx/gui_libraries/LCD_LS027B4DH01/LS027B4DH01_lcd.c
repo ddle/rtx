@@ -1,30 +1,12 @@
 /**
  ******************************************************************************
- * @file    stm3210b_eval_lcd.c
- * @author  MCD Application Team
- * @version V4.6.1
- * @date    18-April-2011
- * @brief   This file includes the LCD driver for AM-240320LTNQW00H (LCD_HX8312),
- *          AM-240320L8TNQW00H (LCD_ILI9320), AM-240320LDTNQW00H (LCD_SPFD5408B)
- *          Liquid Crystal Display Module of STM3210B-EVAL board.
+ * @file    LS27B4DH01_lcd.c
+ * @author  Dan Le
+ * @version V1.0
+ * @date    Feb 2014
+ * @brief   This file includes the LCD driver for LS27B4DH01 display, based on
+ *          STM eval board examples
  ******************************************************************************
- * @attention
- *
- * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
- * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
- * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
- * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
- * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
- * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
- *
- * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
- ******************************************************************************
- */
-
-/**	There is a display buffer (LcdBuffer) in the system located in system RAM and can be
- *	accessed by any task. When any task or application function	writes its display
- *	content to the LcdBuffer and updates refresh flags, the LCD task loads the LcdBuffer
- *	data to our display using defined driver methods.
  */
 
 /* Includes ------------------------------------------------------------------*/
@@ -36,8 +18,13 @@
 #include "../Common/fonts.h"
 #include "cmsis_os.h"
 
-/*
- * RAM buffer for lcd display, organized as follow
+/**
+ * There is a display buffer (LcdBuffer) in the system located in system RAM and can be
+ * accessed by any task. When any task or application function	writes its display
+ * content to the LcdBuffer and updates refresh flags, the LCD task loads the LcdBuffer
+ * data to our display using defined driver methods.
+ *
+ * RAM buffer for lcd display organized as follow
  *
  *        [DIRTY_BYTE]  [COL_0 ... COL_7]   ...
  * ROW_0   00000000/1      x   ...   x
@@ -45,7 +32,7 @@
  * ...
  *
  * */
-uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1] = {};
+static uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1] = {};
 uint16_t buf_xpos, buf_ypos;
 
 /* for sync buffer access */
@@ -55,7 +42,6 @@ osMutexDef(lcd_buffer_mutex);
 /* for sync device access */
 osMutexId lcd_device_mutex;
 osMutexDef(lcd_device_mutex);
-
 
 /** @defgroup STM3210B_EVAL_LCD_Private_Defines
  * @{
@@ -71,9 +57,6 @@ osMutexDef(lcd_device_mutex);
 #define MAX_POLY_CORNERS   200
 #define POLY_Y(Z)          ((int32_t)((Points + Z)->X))
 #define POLY_X(Z)          ((int32_t)((Points + Z)->Y))
-/**
- * @}
- */
 
 
 /** @defgroup STM3210B_EVAL_LCD_Private_Macros
@@ -95,7 +78,6 @@ static __IO uint32_t LCDType = LCD_ILI9320;
 /**
  * @}
  */
-
 
 /** @defgroup STM3210B_EVAL_LCD_Private_Function_Prototypes
  * @{
@@ -152,15 +134,17 @@ void LCD_Setup(void)
     lcd_device_mutex = osMutexCreate(osMutex(lcd_device_mutex));
 
 }
+
+
 /*
- * @Function: LCD_update_one_line()
+ * @Function: LCD_send_one_row()
  * @Brief: send one line from buffer out to LCD, data update only
  * @Param:
  * 	line - specified line (row) to be sent
  * 	frame_inversion - per datasheet
  *
  * */
-void LCD_update_one_line(uint8_t line, uint8_t frame_inversion)
+void LCD_send_one_row(uint8_t line, uint8_t frame_inversion)
 {
 	uint8_t command_byte;
 	uint8_t i;
@@ -196,15 +180,17 @@ void LCD_update_one_line(uint8_t line, uint8_t frame_inversion)
 	osMutexRelease(lcd_device_mutex);
 }
 
+
+
 /*
- * @Function: LCD_update_data()
+ * @Function: LCD_send_rows()
  * @Brief: send multiple lines from buffer out to LCD, data update only
  * @Param:
+ *	from->to : rows to be sent
  * 	frame_inversion - per datasheet
  * @return: update status
  * */
-
-int LCD_update_data(uint8_t frame_inversion)
+int LCD_send_rows(uint16_t from, uint16_t to, uint8_t frame_inversion)
 {
 	uint8_t command_byte;
 	uint8_t i,line;
@@ -217,7 +203,7 @@ int LCD_update_data(uint8_t frame_inversion)
 
 	/* get a hold of the buffer in case other threads want to use it*/
 	osMutexWait(lcd_buffer_mutex, osWaitForever);
-	for (line = 0; line < LCD_PIXEL_HEIGHT; line++)
+	for (line = from; line <= to; line++)
 	{
 		if (lcd_buffer[line][0] == 1) /// check dirty bit
 		{
@@ -289,44 +275,95 @@ void LCD_display_data(uint8_t frame_inversion)
 
 /*
  * @Function: LCD_clear_display()
- * @Brief: send command to display data on LCD
+ * @Brief: clear display and buffer
  * @Param:
- * 	frame_inversion - per datasheet
+ * 	Color - color to be filled on display when cleared
  *
  * */
-void LCD_clear_display(uint8_t frame_inversion)
+void LCD_clear_display(uint16_t Color)
 {
-	uint8_t command_byte;
+	//uint8_t command_byte;
 	uint8_t x,y;
-	if (frame_inversion)
-		command_byte = 0x06;
-	else
-		command_byte = 0x04;
+//	if (frame_inversion)
+//		command_byte = 0x06;
+//	else
+//		command_byte = 0x04;
 
-	/* get a hold of the device in case other threads want to use it*/
-	osMutexWait(lcd_device_mutex, osWaitForever);
-
-	/* assert chip select */
-	digitalWrite(GPIOD,LCD_SCS,HIGH);
-	/* send command byte */
-	shiftOut(LCD_DATA_PORT,LCD_SI,LCD_CLK_PORT, LCD_SCLK, LSBFIRST, command_byte);
-	/* send dummy byte */
-	shiftOut(LCD_DATA_PORT,LCD_SI,LCD_CLK_PORT, LCD_SCLK, LSBFIRST, 0);
-
-	/* de-assert chip select*/
-	digitalWrite(GPIOD,LCD_SCS,LOW);
-
+	Color = ~Color;
 	/* get a hold of the buffer in case other threads want to use it*/
 	osMutexWait(lcd_buffer_mutex, osWaitForever);
 	for (y = 0; y < LCD_PIXEL_HEIGHT; y++)
 	{
 		for (x = 0; x < LCD_PIXEL_WIDTH/8 + 1; x++)
-			lcd_buffer[y][x] = 0;
+			lcd_buffer[y][x] = (Color);
+		lcd_buffer[y][0] = 1;
 	}
 	osMutexRelease(lcd_buffer_mutex);
-	osMutexRelease(lcd_device_mutex);
 
+//	/* get a hold of the device in case other threads want to use it*/
+//	osMutexWait(lcd_device_mutex, osWaitForever);
+//
+//	/* assert chip select */
+//	digitalWrite(GPIOD,LCD_SCS,HIGH);
+//	/* send command byte */
+//	shiftOut(LCD_DATA_PORT,LCD_SI,LCD_CLK_PORT, LCD_SCLK, LSBFIRST, command_byte);
+//	/* send dummy byte */
+//	shiftOut(LCD_DATA_PORT,LCD_SI,LCD_CLK_PORT, LCD_SCLK, LSBFIRST, 0);
+//
+//	/* de-assert chip select*/
+//	digitalWrite(GPIOD,LCD_SCS,LOW);
+//	osMutexRelease(lcd_device_mutex);
 }
+
+
+/*
+ * @Function: LCD_clear_row()
+ * @Brief: clear a row in buffer and mark for sending, no mutex lock
+ * @Param:
+ *	row   - to be cleared
+ * 	Color - color to be filled on display when cleared
+ *
+ * */
+void LCD_clear_row(uint16_t row, uint16_t Color)
+{
+	uint16_t x;
+	Color = ~Color;
+
+	for (x = 1; x < LCD_PIXEL_WIDTH/8 + 1; x++)
+		lcd_buffer[row][x] = (Color);
+	lcd_buffer[row][0] = 1;
+}
+
+/*
+ * @Function: LCD_clear_row()
+ * @Brief: clear rows in buffer and mark for sending, implement lock
+ * @Param:
+ *	from -> to : rows to be cleared
+ *	Color      : color to be filled on display when cleared
+ *
+ * */
+void LCD_clear_rows(uint16_t from, uint16_t to, uint16_t Color)
+{
+	uint16_t x;
+	/* NOTE:  input is unsigned, arithmetic manipulation can cause number to roll-over (negative value)
+	 * here 's simple input check to make sure they are within boundary
+	 * ALso notice use "from >(1 >> 15)" also works but very slow ( large number comparison)
+	 *  */
+	//if((int16_t)from < 0) /// this also is fast
+	if (from & 0xff00)
+		from = 0;
+	if(to >= LCD_PIXEL_HEIGHT)
+		to = LCD_PIXEL_HEIGHT - 1;
+
+	/* get a hold of the buffer in case other threads want to use it*/
+	osMutexWait(lcd_buffer_mutex, osWaitForever);
+
+	for (x = from; x <= to; x++)
+		LCD_clear_row(x, Color);
+
+	osMutexRelease(lcd_buffer_mutex);
+}
+
 /**
  * @brief  Sets the cursor position in buffer
  * @param  Xpos: specifies the X position.
@@ -335,45 +372,26 @@ void LCD_clear_display(uint8_t frame_inversion)
  */
 void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos)
 {
-//	if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+	/* determine boundary of drawing */
+
+//	if((int16_t)Xpos < 0 || Xpos > LCD_PIXEL_WIDTH || (int16_t)Ypos < 0 || Ypos > LCD_PIXEL_HEIGHT)
 //	{
-//		LCD_WriteReg(LCD_REG_32, Xpos);
-//		LCD_WriteReg(LCD_REG_33, Ypos);
-//	}
-//	else if(LCDType == LCD_HX8312)
-//	{
-//		LCD_WriteReg(LCD_REG_66, Xpos);
-//		LCD_WriteReg(LCD_REG_67, ((Ypos & 0x100)>> 8));
-//		LCD_WriteReg(LCD_REG_68, (Ypos & 0xFF));
+//		return;
 //	}
 
-	/* determine boundary of drawing */
-	if(Xpos > (1 << 15)) /// negative value
+	if((int16_t) Xpos < 0) /// negative check
 		buf_xpos = 0;
 	else if (Xpos >= LCD_PIXEL_WIDTH)
 		buf_xpos = LCD_PIXEL_WIDTH - 1;
 	else
 		buf_xpos = Xpos;
 
-	if(Ypos > (1 << 15))
+	if((int16_t)Ypos < 0)
 		buf_ypos = 0;
 	else if (Ypos >= LCD_PIXEL_HEIGHT)
 		buf_ypos = LCD_PIXEL_HEIGHT - 1;
 	else
 		buf_ypos = Ypos;
-
-//	/* wrap around supported */
-//	buf_xpos = Xpos;
-//	//while (buf_xpos >= LCD_PIXEL_WIDTH)
-//	//	buf_xpos=-LCD_PIXEL_WIDTH;
-//	if (buf_xpos >= LCD_PIXEL_WIDTH)
-//		buf_xpos = LCD_PIXEL_WIDTH - 1;
-//
-//	buf_ypos = Ypos;
-//	//while (buf_ypos >= LCD_PIXEL_HEIGHT)
-//	//		buf_ypos=-LCD_PIXEL_HEIGHT;
-//	if (buf_ypos >= LCD_PIXEL_HEIGHT)
-//		buf_ypos = LCD_PIXEL_HEIGHT - 1;
 }
 
 
@@ -384,14 +402,13 @@ void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos)
  * @param  Length: line length.
  * @param  Direction: line direction. *
  *   This parameter can be one of the following values: Vertical or Horizontal.
- *   NOTE: drawing starts (xPos,yPos) at the bottom of the line
+ *   NOTE: drawing starts (xPos,yPos) at the left/bottom of the line
  * @retval None
  */
 void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
 {
 	uint32_t i = 0;
 	//uint16_t x,y;
-
 
 	osMutexWait(lcd_buffer_mutex, osWaitForever);
 
@@ -401,7 +418,7 @@ void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
 		for(i = 0; i < Length; i++)
 		{
 			LCD_WriteRAM(TextColor);
-			y--;
+			x++;
 			LCD_SetCursor(x, y);
 		}
 	}
@@ -410,7 +427,7 @@ void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
 		for(i = 0; i < Length; i++)
 		{
 			LCD_WriteRAM(TextColor);
-			x++;
+			y++;//x++;
 			LCD_SetCursor(x, y);
 		}
 	}
@@ -419,40 +436,36 @@ void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
 
 
 /**
- * @brief  Writes to the LCD RAM.
- * @param  RGB_Code: the pixel color in RGB mode (5-6-5).
+ * @brief  Displays a rectangle.
+ * @param  Xpos: specifies the X position.
+ * @param  Ypos: specifies the Y position.
+ * @param  Height: display rectangle height.
+ * @param  Width: display rectangle width.
  * @retval None
  */
-void LCD_WriteRAM(uint16_t RGB_Code)
+void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
 {
-//	if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-//	{
-//		SPI_I2S_SendData(LCD_SPI, RGB_Code >> 8);
-//		while(SPI_I2S_GetFlagStatus(LCD_SPI, SPI_I2S_FLAG_BSY) != RESET)
-//		{
-//		}
-//		SPI_I2S_SendData(LCD_SPI, RGB_Code & 0xFF);
-//		while(SPI_I2S_GetFlagStatus(LCD_SPI, SPI_I2S_FLAG_BSY) != RESET)
-//		{
-//		}
-//	}
+//	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+//	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
 //
-//	if(LCDType == LCD_HX8312)
-//	{
-//		LCD_CtrlLinesWrite(LCD_NWR_GPIO_PORT, LCD_NWR_PIN, Bit_RESET);
-//		LCD_CtrlLinesWrite(LCD_RS_GPIO_PORT, LCD_RS_PIN, Bit_SET);
-//		LCD_CtrlLinesWrite(LCD_NCS_GPIO_PORT, LCD_NCS_PIN, Bit_RESET);
-//		SPI_I2S_SendData(LCD_SPI, RGB_Code);
-//
-//		while(SPI_I2S_GetFlagStatus(LCD_SPI, SPI_I2S_FLAG_BSY) != RESET)
-//		{
-//		}
-//
-//		LCD_CtrlLinesWrite(LCD_NCS_GPIO_PORT, LCD_NCS_PIN, Bit_SET);
-//	}
+//	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+//	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
 
+	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+	LCD_DrawLine(Xpos, Ypos + Height, Width, LCD_DIR_HORIZONTAL);
+	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+	LCD_DrawLine(Xpos + Width, Ypos, Height, LCD_DIR_VERTICAL);
+}
+
+/**
+ * @brief  set color bit and dirty bit in our RAM buffer.
+ * @param  Color: color to be set
+ * @retval None
+ */
+void LCD_WriteRAM(uint16_t Color)
+{
 	/* 1 bit color only for this LCD */
-	if (RGB_Code == LCD_COLOR_BLACK) // clear bit
+	if (Color == LCD_COLOR_BLACK)
 	{
 		lcd_buffer[buf_ypos][(buf_xpos >> 3) + 1] |= (0x01 << (7 - (buf_xpos & 0x07)));
 	}
@@ -464,6 +477,16 @@ void LCD_WriteRAM(uint16_t RGB_Code)
 	lcd_buffer[buf_ypos][0] = 1;
 }
 
+
+/**
+ * @brief  Clears the whole LCD.
+ * @param  Color: the color of the background.
+ * @retval None
+ */
+void LCD_Clear(uint16_t Color)
+{
+	LCD_clear_display(Color);
+}
 
 /**
  * @brief  Sets the LCD Text and Background colors.
@@ -537,6 +560,8 @@ sFONT *LCD_GetFont(void)
  *   This parameter can be one of the following values:
  *     @arg Linex: where x can be 0..n
  * @retval None
+ *
+ * NOTE: NOT used
  */
 void LCD_ClearLine(uint8_t Line)
 {
@@ -553,44 +578,13 @@ void LCD_ClearLine(uint8_t Line)
 
 
 /**
- * @brief  Clears the hole LCD.
- * @param  Color: the color of the background.
- * @retval None
- */
-void LCD_Clear(uint16_t Color)
-{
-	uint8_t j,data;
-	digitalWriteHigh(GPIOD, LCD_SCS);
-	__NOP(); __NOP(); __NOP(); __NOP();
-	if (digitalRead(GPIOD,LCD_EXTCOMIN))
-		data = 0x60;
-	else
-		data = 0x20;
-	j = 0x80;
-	do {
-		if( data & j )
-			GPIOD->BSRR = 1<<15;
-		else
-			GPIOD->BRR = 1<<15;
-		GPIOD->BSRR = 1<<14;
-		j >>= 1;
-		__NOP(); __NOP();
-		GPIOD->BRR = 1<<14;
-		__NOP();
-	} while ( j );
-	shift_command_trail(0);
-	digitalWriteLow(GPIOD,LCD_SCS);
-}
-
-
-
-
-/**
  * @brief  Draws a character on LCD.
  * @param  Xpos: the Line where to display the character shape.
  * @param  Ypos: start column address.
  * @param  c: pointer to the character data.
  * @retval None
+ *
+ * NOTE: NOT used
  */
 void LCD_DrawChar(uint8_t Xpos, uint16_t Ypos, const uint16_t *c)
 {
@@ -638,6 +632,8 @@ void LCD_DrawChar(uint8_t Xpos, uint16_t Ypos, const uint16_t *c)
  * @param  Column: start column address.
  * @param  Ascii: character ascii code, must be between 0x20 and 0x7E.
  * @retval None
+ *
+ * NOTE: NOT used
  */
 void LCD_DisplayChar(uint8_t Line, uint16_t Column, uint8_t Ascii)
 {
@@ -653,6 +649,8 @@ void LCD_DisplayChar(uint8_t Line, uint16_t Column, uint8_t Ascii)
  *     @arg Linex: where x can be 0..9
  * @param  *ptr: pointer to string to display on LCD.
  * @retval None
+ *
+ * NOTE: NOT used
  */
 void LCD_DisplayStringLine(uint8_t Line, uint8_t *ptr)
 {
@@ -746,22 +744,6 @@ void LCD_WindowModeDisable(void)
 
 
 
-/**
- * @brief  Displays a rectangle.
- * @param  Xpos: specifies the X position.
- * @param  Ypos: specifies the Y position.
- * @param  Height: display rectangle height.
- * @param  Width: display rectangle width.
- * @retval None
- */
-void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
-{
-	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
-	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
-
-	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
-	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
-}
 
 
 /**
@@ -861,7 +843,7 @@ void LCD_DrawMonoPict(const uint32_t *Pict)
 //		LCD_CtrlLinesWrite(LCD_NCS_GPIO_PORT, LCD_NCS_PIN, Bit_SET);
 //	}
 }
-
+//#define USE_LCD_DrawBMP 1
 #ifdef USE_LCD_DrawBMP 
 /**
  * @brief  Displays a bitmap picture loaded in the SPI Flash.
@@ -930,29 +912,31 @@ void LCD_DrawBMP(uint32_t BmpAddress)
  * @param  Height: rectangle height.
  * @param  Width: rectangle width.
  * @retval None
+ *
+ * XXX: driver specific implementation needed
  */
 void LCD_DrawFullRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height)
 {
-	LCD_SetTextColor(TextColor);
+	//LCD_SetTextColor(TextColor);
 
-	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
-	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
+//	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+//	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
+//
+//	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+//	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
 
-	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
-	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
+	//Width -= 2;
+	//Height--;
+	//Ypos--;
 
-	Width -= 2;
-	Height--;
-	Ypos--;
-
-	LCD_SetTextColor(BackColor);
+	//LCD_SetTextColor(BackColor);
 
 	while(Height--)
 	{
-		LCD_DrawLine(++Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+		LCD_DrawLine(Xpos, Ypos++, Width, LCD_DIR_HORIZONTAL);
 	}
 
-	LCD_SetTextColor(TextColor);
+	//LCD_SetTextColor(color);
 }
 
 /**
@@ -973,7 +957,7 @@ void LCD_DrawFullCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 	CurX = 0;
 	CurY = Radius;
 
-	LCD_SetTextColor(BackColor);
+	//LCD_SetTextColor(BackColor);
 
 	while (CurX <= CurY)
 	{
@@ -1000,7 +984,7 @@ void LCD_DrawFullCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 		CurX++;
 	}
 
-	LCD_SetTextColor(TextColor);
+	//LCD_SetTextColor(TextColor);
 	LCD_DrawCircle(Xpos, Ypos, Radius);
 }
 
@@ -1704,11 +1688,16 @@ void LCD_SPIConfig(void)
  */
 static void PutPixel(int16_t x, int16_t y)
 { 
-	if(x < 0 || x > 239 || y < 0 || y > 319)
-	{
-		return;
-	}
-	LCD_DrawLine(x, y, 1, LCD_DIR_HORIZONTAL);
+//	if(x < 0 || x > 239 || y < 0 || y > 319)
+//	{
+//		return;
+//	}
+	osMutexWait(lcd_buffer_mutex, osWaitForever);
+	LCD_SetCursor(x, y);
+	LCD_WriteRAM(TextColor);
+	osMutexRelease(lcd_buffer_mutex);
+
+	//LCD_DrawLine(x, y, 1, LCD_DIR_HORIZONTAL);
 }
 
 #ifndef USE_Delay
