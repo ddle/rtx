@@ -32,6 +32,7 @@
  * ...
  *
  * */
+
 static uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1] = {};
 uint16_t buf_xpos, buf_ypos;
 
@@ -180,7 +181,15 @@ void LCD_send_one_row(uint8_t line, uint8_t frame_inversion)
 	osMutexRelease(lcd_device_mutex);
 }
 
+void lock_buffer()
+{
+	osMutexWait(lcd_device_mutex, osWaitForever);
+}
 
+void unlock_buffer()
+{
+	osMutexRelease(lcd_device_mutex);
+}
 
 /*
  * @Function: LCD_send_rows()
@@ -478,6 +487,7 @@ void LCD_WriteRAM(uint16_t Color)
 }
 
 
+
 /**
  * @brief  Clears the whole LCD.
  * @param  Color: the color of the background.
@@ -597,10 +607,6 @@ void LCD_DrawChar(uint8_t Xpos, uint16_t Ypos, const uint16_t *c)
 
 	for(index = 0; index < LCD_Currentfonts->Height; index++)
 	{
-		if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-		{
-			LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
-		}
 		for(i = 0; i < LCD_Currentfonts->Width; i++)
 		{
 			if((((c[index] & ((0x80 << ((LCD_Currentfonts->Width / 12 ) * 8 ) ) >> i)) == 0x00) &&(LCD_Currentfonts->Width <= 12))||
@@ -614,15 +620,42 @@ void LCD_DrawChar(uint8_t Xpos, uint16_t Ypos, const uint16_t *c)
 				LCD_WriteRAM(TextColor);
 			}
 		}
-		if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-		{
-			LCD_CtrlLinesWrite(LCD_NCS_GPIO_PORT, LCD_NCS_PIN, Bit_SET);
-		}
+
 		Xaddress++;
 		LCD_SetCursor(Xaddress, Ypos);
 	}
 }
 
+
+void LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
+{
+	uint32_t index = 0, i = 0;
+		uint8_t Xaddress = 0;
+
+		Xaddress = Xpos;
+
+		LCD_SetCursor(Xaddress, Ypos);
+
+		for(index = 0; index < LCD_Currentfonts->Height; index++)
+		{
+			for(i = 0; i < LCD_Currentfonts->Width; i++)
+			{
+				if((((c[index] & ((0x80 << ((LCD_Currentfonts->Width / 12 ) * 8 ) ) >> i)) == 0x00) &&(LCD_Currentfonts->Width <= 12))||
+						(((c[index] & (0x1 << i)) == 0x00)&&(LCD_Currentfonts->Width > 12 )))
+
+				{
+					//LCD_WriteRAM(BackColor);
+				}
+				else
+				{
+					LCD_WriteRAM(TextColor);
+				}
+			}
+
+			Xaddress++;
+			LCD_SetCursor(Xaddress, Ypos);
+		}
+}
 
 /**
  * @brief  Displays one character (16dots width, 24dots height).
@@ -679,45 +712,45 @@ void LCD_DisplayStringLine(uint8_t Line, uint8_t *ptr)
  */
 void LCD_SetDisplayWindow(uint8_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
 {
-	if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-	{
-		/* Horizontal GRAM Start Address */
-		if(Xpos >= Height)
-		{
-			LCD_WriteReg(LCD_REG_80, (Xpos - Height + 1));
-		}
-		else
-		{
-			LCD_WriteReg(LCD_REG_80, 0);
-		}
-		/* Horizontal GRAM End Address */
-		LCD_WriteReg(LCD_REG_81, Xpos);
-		/* Vertical GRAM Start Address */
-		if(Ypos >= Width)
-		{
-			LCD_WriteReg(LCD_REG_82, (Ypos - Width + 1));
-		}
-		else
-		{
-			LCD_WriteReg(LCD_REG_82, 0);
-		}
-		/* Vertical GRAM End Address */
-		LCD_WriteReg(LCD_REG_83, Ypos);
-	}
-	else if(LCDType == LCD_HX8312)
-	{
-		LCD_WriteReg(LCD_REG_1, 0xD0);
-		LCD_WriteReg(LCD_REG_5, 0x14);
-
-		LCD_WriteReg(LCD_REG_69, (Xpos - Height + 1));
-		LCD_WriteReg(LCD_REG_70, Xpos);
-
-		LCD_WriteReg(LCD_REG_71, (((Ypos - Width + 1) & 0x100)>> 8));
-		LCD_WriteReg(LCD_REG_72, ((Ypos - Width + 1) & 0xFF));
-		LCD_WriteReg(LCD_REG_73, ((Ypos & 0x100)>> 8));
-		LCD_WriteReg(LCD_REG_74, (Ypos & 0xFF));
-	}
-	LCD_SetCursor(Xpos, Ypos);
+//	if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//	{
+//		/* Horizontal GRAM Start Address */
+//		if(Xpos >= Height)
+//		{
+//			LCD_WriteReg(LCD_REG_80, (Xpos - Height + 1));
+//		}
+//		else
+//		{
+//			LCD_WriteReg(LCD_REG_80, 0);
+//		}
+//		/* Horizontal GRAM End Address */
+//		LCD_WriteReg(LCD_REG_81, Xpos);
+//		/* Vertical GRAM Start Address */
+//		if(Ypos >= Width)
+//		{
+//			LCD_WriteReg(LCD_REG_82, (Ypos - Width + 1));
+//		}
+//		else
+//		{
+//			LCD_WriteReg(LCD_REG_82, 0);
+//		}
+//		/* Vertical GRAM End Address */
+//		LCD_WriteReg(LCD_REG_83, Ypos);
+//	}
+//	else if(LCDType == LCD_HX8312)
+//	{
+//		LCD_WriteReg(LCD_REG_1, 0xD0);
+//		LCD_WriteReg(LCD_REG_5, 0x14);
+//
+//		LCD_WriteReg(LCD_REG_69, (Xpos - Height + 1));
+//		LCD_WriteReg(LCD_REG_70, Xpos);
+//
+//		LCD_WriteReg(LCD_REG_71, (((Ypos - Width + 1) & 0x100)>> 8));
+//		LCD_WriteReg(LCD_REG_72, ((Ypos - Width + 1) & 0xFF));
+//		LCD_WriteReg(LCD_REG_73, ((Ypos & 0x100)>> 8));
+//		LCD_WriteReg(LCD_REG_74, (Ypos & 0xFF));
+//	}
+//	LCD_SetCursor(Xpos, Ypos);
 }
 
 
@@ -963,14 +996,18 @@ void LCD_DrawFullCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 	{
 		if(CurY > 0)
 		{
-			LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos + CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
+			//LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
+			//LCD_DrawLine(Xpos + CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurY, Ypos - CurX, 2*CurY, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurY, LCD_DIR_HORIZONTAL);
 		}
 
 		if(CurX > 0)
 		{
-			LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos + CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
+			//LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
+			//LCD_DrawLine(Xpos + CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurX, Ypos - CurY, 2*CurX, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurX, LCD_DIR_HORIZONTAL);
 		}
 		if (D < 0)
 		{
@@ -1047,10 +1084,14 @@ void LCD_DrawUniLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 		numadd = deltax;
 		numpixels = deltay;         /* There are more y-values than x-values */
 	}
-
+	osMutexWait(lcd_buffer_mutex, osWaitForever);
 	for (curpixel = 0; curpixel <= numpixels; curpixel++)
 	{
-		PutPixel(x, y);             /* Draw the current pixel */
+		//PutPixel(x, y);             /* Draw the current pixel */
+
+		LCD_SetCursor(x, y);
+		LCD_WriteRAM(TextColor);
+
 		num += numadd;              /* Increase the numerator by the top of the fraction */
 		if (num >= den)             /* Check if numerator >= denominator */
 		{
@@ -1061,6 +1102,8 @@ void LCD_DrawUniLine(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 		x += xinc2;                 /* Change the x as appropriate */
 		y += yinc2;                 /* Change the y as appropriate */
 	}
+	osMutexRelease(lcd_buffer_mutex);
+
 }
 
 /**
@@ -1129,6 +1172,7 @@ void LCD_ClosedPolyLine(pPoint Points, uint16_t PointCount)
 {
 	LCD_PolyLine(Points, PointCount);
 	LCD_DrawUniLine(Points->X, Points->Y, (Points+PointCount-1)->X, (Points+PointCount-1)->Y);
+
 }
 
 /**
@@ -1154,11 +1198,40 @@ void LCD_ClosedPolyLineRelative(pPoint Points, uint16_t PointCount)
 }
 
 
+void LCD_DrawLine_old(uint8_t Xpos, uint16_t Ypos, uint16_t Length, uint8_t Direction)
+{
+  uint32_t i = 0;
+
+  LCD_SetCursor(Xpos, Ypos);
+  if(Direction == LCD_DIR_HORIZONTAL)
+  {
+
+    for(i = 0; i < Length; i++)
+    {
+      LCD_WriteRAM(TextColor);
+    }
+
+  }
+  else
+  {
+   for(i = 0; i < Length; i++)
+    {
+
+        LCD_WriteRAM(TextColor);
+
+      Xpos++;
+      LCD_SetCursor(Xpos, Ypos);
+    }
+  }
+}
+
 /**
  * @brief  Displays a  full polyline (between many points).
  * @param  Points: pointer to the points array.
  * @param  PointCount: Number of points.
  * @retval None
+ *
+ * TODO: does not work ... yet.
  */
 void LCD_FillPolyLine(pPoint Points, uint16_t PointCount)
 {
@@ -1193,6 +1266,7 @@ void LCD_FillPolyLine(pPoint Points, uint16_t PointCount)
 		}
 	}
 
+	uint16_t color =  TextColor;
 	LCD_SetTextColor(BackColor);
 
 	/*  Loop through the rows of the image. */
@@ -1249,16 +1323,22 @@ void LCD_FillPolyLine(pPoint Points, uint16_t PointCount)
 				}
 				LCD_SetTextColor(BackColor);
 				LCD_DrawLine(pixelY, nodeX[i+1], nodeX[i+1] - nodeX[i], LCD_DIR_HORIZONTAL);
-				LCD_SetTextColor(TextColor);
-				PutPixel(pixelY, nodeX[i+1]);
-				PutPixel(pixelY, nodeX[i]);
+				LCD_SetTextColor(color);
+				osMutexWait(lcd_buffer_mutex, osWaitForever);
+					LCD_SetCursor(pixelY, nodeX[i+1]);
+					LCD_WriteRAM(TextColor);
+					LCD_SetCursor(pixelY, nodeX[i]);
+					LCD_WriteRAM(TextColor);
+				osMutexRelease(lcd_buffer_mutex);
+
+
 				/* for (j=nodeX[i]; j<nodeX[i+1]; j++) PutPixel(j,pixelY); */
 			}
 		}
 	}
 
 	/* draw the edges */
-	LCD_SetTextColor(TextColor);
+	LCD_SetTextColor(color);
 }
 
 /**
@@ -1698,6 +1778,10 @@ static void PutPixel(int16_t x, int16_t y)
 	osMutexRelease(lcd_buffer_mutex);
 
 	//LCD_DrawLine(x, y, 1, LCD_DIR_HORIZONTAL);
+}
+uint16_t GetPixel(uint16_t Xpos, uint16_t Ypos)
+{
+	return (lcd_buffer[Ypos][(Xpos >> 3) + 1] & (0x01 << (7 - (Xpos & 0x07)))) ? (LCD_COLOR_BLACK): (LCD_COLOR_WHITE);
 }
 
 #ifndef USE_Delay

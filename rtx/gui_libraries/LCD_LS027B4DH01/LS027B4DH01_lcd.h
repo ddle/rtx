@@ -337,6 +337,10 @@ void LCD_clear_row(uint16_t row,uint16_t Color);
 void LCD_clear_rows(uint16_t from, uint16_t to,uint16_t Color);
 void LCD_clear_display(uint16_t Color);
 void LCD_Clear(uint16_t Color);
+uint16_t GetPixel(uint16_t Xpos, uint16_t Ypos);
+void lock_buffer();
+void unlock_buffer();
+
 
 
 void LCD_DeInit(void);

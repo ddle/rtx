@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cmsis_os.h"
 
 /** @addtogroup Embedded_GUI_Library
   * @{
@@ -79,10 +80,124 @@ extern __IO uint32_t u32_TSYCoordinate;
 #define p_strlen(iBuf)              strlen((char*)iBuf)
 #define p_strcmp(str1,str2)         strcmp((char*)str1,(char*)str2)
 #define p_strcpy(str1,str2)         strcpy((char*)str1,(char*)str2)
-/**
+
+
+/** prepare some memory pools
   * @}
   */
-  
+
+/* catch ... */
+void mem_pool_error()
+{
+	while(1);
+}
+
+// memset(&objCoordinates, 0x00, sizeof(GL_Coordinate_TypeDef));
+// pControlObj = (GL_Label_TypeDef *)malloc(sizeof(GL_Label_TypeDef));
+//GL_PageControls_TypeDef
+//GL_Button_TypeDef
+osPoolDef (GL_Coordinate_MemPool, 8*sizeof(GL_Coordinate_TypeDef), GL_Coordinate_TypeDef);
+osPoolDef (GL_Label_MemPool, 8*sizeof(GL_Label_TypeDef), GL_Label_TypeDef);
+osPoolDef (GL_PageControls_MemPool, 8*sizeof(GL_PageControls_TypeDef), GL_PageControls_TypeDef);
+osPoolDef (GL_Button_MemPool, 8*sizeof(GL_Button_TypeDef), GL_Button_TypeDef);
+GL_Button_TypeDef* AlocMemoryPool_GL_Button ()
+{
+  osPoolId   MemPool_Id;
+  GL_Button_TypeDef *addr;
+
+  MemPool_Id = osPoolCreate (osPool (GL_Button_MemPool));
+  if (MemPool_Id != NULL)
+  {
+    addr = (GL_Button_TypeDef *)osPoolAlloc (MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	mem_pool_error();
+    	return NULL;
+    }
+  }
+  else
+  {
+	  mem_pool_error();
+	  return NULL;
+  }
+}
+
+
+GL_PageControls_TypeDef* AlocMemoryPool_GL_PageControls ()
+{
+  osPoolId   MemPool_Id;
+  GL_PageControls_TypeDef *addr;
+
+  MemPool_Id = osPoolCreate (osPool (GL_PageControls_MemPool));
+  if (MemPool_Id != NULL)
+  {
+    addr = (GL_PageControls_TypeDef *)osPoolAlloc (MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	mem_pool_error();
+    	return NULL;
+    }
+  }
+  else
+  {
+	  mem_pool_error();
+	  return NULL;
+  }
+}
+
+GL_Label_TypeDef* AlocMemoryPool_GL_Label ()
+{
+  osPoolId   MemPool_Id;
+  GL_Label_TypeDef *addr;
+
+  MemPool_Id = osPoolCreate (osPool (GL_Label_MemPool));
+  if (MemPool_Id != NULL)
+  {
+    addr = (GL_Label_TypeDef *)osPoolAlloc (MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	mem_pool_error();
+    	return NULL;
+    }
+  }
+  else
+  {
+	  mem_pool_error();
+	  return NULL;
+  }
+}
+GL_Coordinate_TypeDef* AlocMemoryPool_GL_Coordinate ()
+{
+  osPoolId   MemPool_Id;
+  GL_Coordinate_TypeDef *addr;
+
+  MemPool_Id = osPoolCreate (osPool (GL_Coordinate_MemPool));
+  if (MemPool_Id != NULL)
+  {
+    addr = (GL_Coordinate_TypeDef *)osPoolAlloc (MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	mem_pool_error();
+    	return NULL;
+    }
+  }
+  else
+  {
+	  mem_pool_error();
+	  return NULL;
+  }
+}
+
+
+
 /* Private variables ---------------------------------------------------------*/
 /** @defgroup graphicObject_Private_Variables
   * @{
@@ -427,7 +542,8 @@ GL_PageControls_TypeDef* NewLabel (uint16_t ID, const uint8_t* label, GL_Directi
   GL_Label_TypeDef *pControlObj = NULL;
   GL_PageControls_TypeDef * pPageControlObj = NULL;
 
-  pControlObj = (GL_Label_TypeDef *)malloc(sizeof(GL_Label_TypeDef));
+  //pControlObj = (GL_Label_TypeDef *)malloc(sizeof(GL_Label_TypeDef));
+  pControlObj = AlocMemoryPool_GL_Label();
   if (pControlObj)
   {
     pControlObj->ID = ID;
@@ -440,7 +556,8 @@ GL_PageControls_TypeDef* NewLabel (uint16_t ID, const uint8_t* label, GL_Directi
     /* Create the Label object */
     Create_Label(pControlObj);
 
-    pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    //pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    pPageControlObj = AlocMemoryPool_GL_PageControls();
     if ( pPageControlObj )
     {
       pPageControlObj->objPTR = (void*)pControlObj;
@@ -467,7 +584,8 @@ GL_PageControls_TypeDef* NewButton (uint16_t ID, const uint8_t* label, void (*pE
   GL_PageControls_TypeDef *pPageControlObj = NULL;
   GL_Button_TypeDef *pControlObj = NULL;
 
-  pControlObj = (GL_Button_TypeDef *)malloc(sizeof(GL_Button_TypeDef));
+  //pControlObj = (GL_Button_TypeDef *)malloc(sizeof(GL_Button_TypeDef));
+  pControlObj = AlocMemoryPool_GL_Button();
 
   if (pControlObj)
   {
@@ -482,7 +600,8 @@ GL_PageControls_TypeDef* NewButton (uint16_t ID, const uint8_t* label, void (*pE
     /* Create the Button object */
     Create_Button(pControlObj);
 
-    pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    //pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    pPageControlObj = AlocMemoryPool_GL_PageControls();
     if ( pPageControlObj )
     {
       pPageControlObj->objPTR = (void*)pControlObj;
@@ -960,6 +1079,7 @@ GL_ErrStatus AddPageControlObj (uint16_t PosX, uint16_t PosY, GL_PageControls_Ty
     GL_ComboBoxGrp_TypeDef* pTmpComboBoxGrp1 = NULL;
 
     memset(&objCoordinates, 0x00, sizeof(GL_Coordinate_TypeDef));
+    //AlocMemoryPool_GL_Coordinate();
     if ((PosX > LCD_Width) || (PosY > LCD_Height))
     {
       return GL_ERROR;

@@ -144,6 +144,77 @@ void GL_Clear(uint16_t Color)
   LCD_Clear(Color);
 }
 
+
+/**
+  * @brief  Draws a character on LCD.
+  * @param  Xpos: the Line where to display the character shape.
+  *         This parameter can be one of the following values:
+  *     @arg  - Linex: where x can be 0..9
+  * @param  Ypos: start column address.
+  * @param  c: pointer to the character data.
+  * @retval None
+  */
+void GL_LCD_DrawChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
+{
+  uint32_t line_index = 0, pixel_index = 0;
+  uint8_t Xaddress = 0;
+  uint16_t Yaddress = 0;
+  __IO uint16_t tmp_color = 0;
+
+  Xaddress = Xpos;
+  Yaddress = Ypos;
+
+  lock_buffer();
+  for (line_index = 0; line_index < GL_FontHeight; line_index++)
+  {
+    /* SmallFonts have bytes in reverse order */
+    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << 0)) == 0x00) ||
+        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> 0)) == 0x00))
+    {
+      tmp_color = GL_BackColor;
+    }
+    else
+    {
+      tmp_color = GL_TextColor;
+    }
+
+    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, FirstPixel);
+
+    for (pixel_index = 1; pixel_index < GL_FontWidth - 1; pixel_index++)
+    {
+      /* SmallFonts have bytes in reverse order */
+      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
+          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
+      {
+        tmp_color = GL_BackColor;
+      }
+      else
+      {
+        tmp_color = GL_TextColor;
+      }
+
+      LCD_PutPixel(Xaddress, Yaddress--, tmp_color, MiddlePixel);
+    }
+    pixel_index++;
+    /* SmallFonts have bytes in reverse order */
+    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
+        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
+    {
+      tmp_color = GL_BackColor;
+    }
+    else
+    {
+      tmp_color = GL_TextColor;
+    }
+
+    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, LastPixel);
+
+    Xaddress++;
+    Yaddress = Ypos;
+  }
+  unlock_buffer();
+}
+
 /**
   * @brief  Draws a character on LCD without background.
   * @param  Xpos: the Line where to display the character shape.
@@ -161,7 +232,7 @@ void GL_LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
 
   Xaddress = Xpos;
   Yaddress = Ypos;
-
+  lock_buffer();
   for (line_index = 0; line_index < GL_FontHeight; line_index++)
   {
     for (pixel_index = 0; pixel_index < GL_FontWidth; pixel_index++)
@@ -180,6 +251,7 @@ void GL_LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
     Xaddress++;
     Yaddress = Ypos;
   }
+  unlock_buffer();
 }
 
 /**
@@ -303,51 +375,52 @@ void GL_LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Widt
   */
 void GL_LCD_DrawCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 {
-  int32_t  D;/* Decision Variable */
-  uint32_t  CurX;/* Current X Value */
-  uint32_t  CurY;/* Current Y Value */
-
-  D = 3 - (Radius << 1);
-  CurX = 0;
-  CurY = Radius;
-
-  while (CurX <= CurY)
-  {
-    LCD_SetCursor(Xpos + CurX, Ypos + CurY);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos + CurX, Ypos - CurY);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos - CurX, Ypos + CurY);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos - CurX, Ypos - CurY);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos + CurY, Ypos + CurX);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos + CurY, Ypos - CurX);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos - CurY, Ypos + CurX);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    LCD_SetCursor(Xpos - CurY, Ypos - CurX);
-    LCD_WriteRAMWord(GL_TextColor);
-
-    if (D < 0)
-    {
-      D += (CurX << 2) + 6;
-    }
-    else
-    {
-      D += ((CurX - CurY) << 2) + 10;
-      CurY--;
-    }
-    CurX++;
-  }
+	LCD_DrawCircle(Xpos,Ypos,Radius);
+//  int32_t  D;/* Decision Variable */
+//  uint32_t  CurX;/* Current X Value */
+//  uint32_t  CurY;/* Current Y Value */
+//
+//  D = 3 - (Radius << 1);
+//  CurX = 0;
+//  CurY = Radius;
+//
+//  while (CurX <= CurY)
+//  {
+//    LCD_SetCursor(Xpos + CurX, Ypos + CurY);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos + CurX, Ypos - CurY);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos - CurX, Ypos + CurY);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos - CurX, Ypos - CurY);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos + CurY, Ypos + CurX);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos + CurY, Ypos - CurX);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos - CurY, Ypos + CurX);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    LCD_SetCursor(Xpos - CurY, Ypos - CurX);
+//    LCD_WriteRAMWord(GL_TextColor);
+//
+//    if (D < 0)
+//    {
+//      D += (CurX << 2) + 6;
+//    }
+//    else
+//    {
+//      D += ((CurX - CurY) << 2) + 10;
+//      CurY--;
+//    }
+//    CurX++;
+//  }
 }
 
 /**
@@ -467,8 +540,8 @@ void GL_LCD_Init(void)
   */
 void GL_LCD_WindowModeDisable(void)
 {
-  LCD_SetDisplayWindow(239, 0x13F, 240, 320);
-  LCD_WriteReg(R3, 0x1018);
+  //LCD_SetDisplayWindow(239, 0x13F, 240, 320);
+  //LCD_WriteReg(R3, 0x1018);
 }
 
 /**
@@ -488,32 +561,34 @@ void GL_LCD_WindowModeDisable(void)
   *     @arg  - LasPixel:    Ending pixel of block-writing sequence
   *     @arg  - SinglePixel: Separated pixel.
   * @retval None
+  *
+  * XXX: driver specific implementation needed
   */
 void LCD_PutPixel(uint16_t Xpos, uint16_t Ypos, uint16_t Color, uint8_t PixelSpec)
 {
   /*Start part of put pixel for first pixel of block and for single one.
   It consists of set the cursor's position and GRAM prepare sequence.*/
-  if ((PixelSpec & (FirstPixel | SinglePixel)) != GL_RESET)
-  {
+//  if ((PixelSpec & (FirstPixel | SinglePixel)) != GL_RESET)
+//  {
     LCD_SetCursor(Xpos, Ypos);
-    LCD_WriteRAM_Prepare();
-  }
+//    //LCD_WriteRAM_Prepare();
+//  }
 
   /*Write pixel's color to GRAM. Obligatory for all modes of PutPixel call.*/
   LCD_WriteRAM(Color);
 
-  if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI)
-  {
-    /*End part of putting pixel for last pixel of block or single pixel.
-    Close usage of display by setting CS high.*/
-    if ((PixelSpec &(LastPixel | SinglePixel) ) != GL_RESET)
-    {
-      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
-      {
-        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
-      }
-    }
-  }
+//  if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI)
+//  {
+//    /*End part of putting pixel for last pixel of block or single pixel.
+//    Close usage of display by setting CS high.*/
+//    if ((PixelSpec &(LastPixel | SinglePixel) ) != GL_RESET)
+//    {
+//      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+//      {
+//        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+//      }
+//    }
+//  }
 }
 
 /**
@@ -524,95 +599,29 @@ void LCD_PutPixel(uint16_t Xpos, uint16_t Ypos, uint16_t Color, uint8_t PixelSpe
   */
 uint16_t LCD_GetPixel(uint16_t Xpos, uint16_t Ypos)
 {
-  uint16_t tmpColor = 0, tmpRed = 0, tmpBlue = 0;
-
-  /*Read the color of given pixel*/
-  LCD_SetCursor(Xpos, Ypos);
-  if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI)
-  {
-    tmpColor = LCD_ReadReg(R34);
-  }
-  else
-  {
-    tmpColor = GL_LCD_ReadRAM();
-  }
-
-  /*Swap the R and B color channels*/
-  tmpRed = (tmpColor & Blue) << 11;
-  tmpBlue = (tmpColor & Red) >> 11;
-  tmpColor &= ~(Red | Blue);
-  tmpColor |= (tmpRed | tmpBlue);
-
-  return tmpColor;
+//  uint16_t tmpColor = 0, tmpRed = 0, tmpBlue = 0;
+//
+//  /*Read the color of given pixel*/
+//  LCD_SetCursor(Xpos, Ypos);
+//  if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI)
+//  {
+//    tmpColor = LCD_ReadReg(R34);
+//  }
+//  else
+//  {
+//    tmpColor = GL_LCD_ReadRAM();
+//  }
+//
+//  /*Swap the R and B color channels*/
+//  tmpRed = (tmpColor & Blue) << 11;
+//  tmpBlue = (tmpColor & Red) >> 11;
+//  tmpColor &= ~(Red | Blue);
+//  tmpColor |= (tmpRed | tmpBlue);
+//
+//  return tmpColor;
+	GetPixel(Xpos,Ypos);
 }
 
-/**
-  * @brief  Draws a character on LCD.
-  * @param  Xpos: the Line where to display the character shape.
-  *         This parameter can be one of the following values:
-  *     @arg  - Linex: where x can be 0..9
-  * @param  Ypos: start column address.
-  * @param  c: pointer to the character data.
-  * @retval None
-  */
-void GL_LCD_DrawChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
-{
-  uint32_t line_index = 0, pixel_index = 0;
-  uint8_t Xaddress = 0;
-  uint16_t Yaddress = 0;
-  __IO uint16_t tmp_color = 0;
-
-  Xaddress = Xpos;
-  Yaddress = Ypos;
-
-  for (line_index = 0; line_index < GL_FontHeight; line_index++)
-  {
-    /* SmallFonts have bytes in reverse order */
-    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << 0)) == 0x00) ||
-        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> 0)) == 0x00))
-    {
-      tmp_color = GL_BackColor;
-    }
-    else
-    {
-      tmp_color = GL_TextColor;
-    }
-
-    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, FirstPixel);
-
-    for (pixel_index = 1; pixel_index < GL_FontWidth - 1; pixel_index++)
-    {
-      /* SmallFonts have bytes in reverse order */
-      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
-          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
-      {
-        tmp_color = GL_BackColor;
-      }
-      else
-      {
-        tmp_color = GL_TextColor;
-      }
-
-      LCD_PutPixel(Xaddress, Yaddress--, tmp_color, MiddlePixel);
-    }
-    pixel_index++;
-    /* SmallFonts have bytes in reverse order */
-    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
-        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
-    {
-      tmp_color = GL_BackColor;
-    }
-    else
-    {
-      tmp_color = GL_TextColor;
-    }
-
-    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, LastPixel);
-
-    Xaddress++;
-    Yaddress = Ypos;
-  }
-}
 
 /**
   * @brief  Copy 4 bytes from bitmap array to 32Bit buffer
@@ -760,7 +769,7 @@ void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
     Yaddress = Ypos;
     LCD_SetCursor(Xpos, Yaddress);
   }
-
+  lock_buffer();
   for (index = 0; index < GL_FontHeight; index++)
   {
 //    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
@@ -830,6 +839,7 @@ void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c)
       LCD_SetCursor(Xpos, Yaddress);
     }
   }
+  unlock_buffer();
 }
 
 /**
@@ -943,52 +953,54 @@ void LCD_PrintStringLine(uint16_t Line, uint16_t Column, uint8_t *ptr)
   * @param  Height:    The Height of the image
   * @param  Width:     The Width of the image
   * @retval None
+  *
+  * TODO: need to implement draw direction for all objects
   */
 void LCD_DrawMonoBMP(const uint8_t *Pict, uint16_t Xpos_Init, uint16_t Ypos_Init, uint16_t Height, uint16_t Width)
 {
   int32_t index = 0, counter = 0;
 
-
-  if (LCD_Direction == _0_degree)
-  {
-    LCD_SetDisplayWindow(Xpos_Init, Ypos_Init, Height, Width);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1008);
-  }
-  else if (LCD_Direction == _90_degree)
-  {
-    LCD_SetDisplayWindow(Xpos_Init + Width - 1, Ypos_Init, Width, Height);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
-    /* AM=0 (address is updated in horizontal writing direction) */
-    LCD_WriteReg(R3, 0x1010);
-  }
-  else if (LCD_Direction == _180_degree)
-  {
-    LCD_SetDisplayWindow(Xpos_Init + Height - 1, Ypos_Init + Width - 1, Height, Width);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=11 (Horizontal : increment, Vertical : increment) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1038);
-  }
-  else if (LCD_Direction == _270_degree)
-  {
-    LCD_SetDisplayWindow(Xpos_Init, Ypos_Init + Height - 1, Width, Height);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
-    /* AM=0 (address is updated in horizontal writing direction) */
-    LCD_WriteReg(R3, 0x1020);
-  }
+//
+//  if (LCD_Direction == _0_degree)
+//  {
+//    LCD_SetDisplayWindow(Xpos_Init, Ypos_Init, Height, Width);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1008);
+//  }
+//  else if (LCD_Direction == _90_degree)
+//  {
+//    LCD_SetDisplayWindow(Xpos_Init + Width - 1, Ypos_Init, Width, Height);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
+//    /* AM=0 (address is updated in horizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1010);
+//  }
+//  else if (LCD_Direction == _180_degree)
+//  {
+//    LCD_SetDisplayWindow(Xpos_Init + Height - 1, Ypos_Init + Width - 1, Height, Width);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=11 (Horizontal : increment, Vertical : increment) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1038);
+//  }
+//  else if (LCD_Direction == _270_degree)
+//  {
+//    LCD_SetDisplayWindow(Xpos_Init, Ypos_Init + Height - 1, Width, Height);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
+//    /* AM=0 (address is updated in horizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1020);
+//  }
 
   LCD_SetCursor(Xpos_Init, Ypos_Init);
 
-  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-  {
-    /* Prepare to write GRAM */
-    LCD_WriteRAM_Prepare(); 
-  }
+//  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//  {
+//    /* Prepare to write GRAM */
+//    LCD_WriteRAM_Prepare();
+//  }
 
   for (index = 0; index < (Height*Width) / 8; index++)
   {
@@ -1005,15 +1017,15 @@ void LCD_DrawMonoBMP(const uint8_t *Pict, uint16_t Xpos_Init, uint16_t Ypos_Init
     }
   }
 
-  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-  {
-    if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
-    {
-      GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
-    }
-  }
+//  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//  {
+//    if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+//    {
+//      GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+//    }
+//  }
   LCD_Change_Direction(LCD_Direction);
-  GL_SetDisplayWindow(LCD_Height - 1, LCD_Width - 1, LCD_Height, LCD_Width);
+//  GL_SetDisplayWindow(LCD_Height - 1, LCD_Width - 1, LCD_Height, LCD_Width);
 }
 
 /**
@@ -1031,60 +1043,60 @@ void LCD_FillArea(uint16_t Xpos_Init, uint16_t Ypos_Init, uint16_t Height, uint1
   uint32_t index = 0;
 
   area =  Width *  Height;
-  if (LCD_Direction == _0_degree)
-  {
-    GL_SetDisplayWindow(Xpos_Init, Ypos_Init, Height, Width);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1008);
-  }
-  else if (LCD_Direction == _90_degree)
-  {
-    GL_SetDisplayWindow(Xpos_Init + Width - 1, Ypos_Init, Width, Height);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
-    /* AM=0 (address is updated in horizontal writing direction) */
-    LCD_WriteReg(R3, 0x1010);
-  }
-  else if (LCD_Direction == _180_degree)
-  {
-    GL_SetDisplayWindow(Xpos_Init + Height - 1, Ypos_Init + Width - 1, Height, Width);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=11 (Horizontal : increment, Vertical : increment) */
-    /* AM=1 (address is updated in vertical writing direction) */
-    LCD_WriteReg(R3, 0x1038);
-  }
-  else if (LCD_Direction == _270_degree)
-  {
-    GL_SetDisplayWindow(Xpos_Init, Ypos_Init + Height - 1, Width, Height);
-    /* Set GRAM write direction and BGR = 1 */
-    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
-    /* AM=0 (address is updated in horizontal writing direction) */
-    LCD_WriteReg(R3, 0x1020);
-  }
+//  if (LCD_Direction == _0_degree)
+//  {
+//    GL_SetDisplayWindow(Xpos_Init, Ypos_Init, Height, Width);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1008);
+//  }
+//  else if (LCD_Direction == _90_degree)
+//  {
+//    GL_SetDisplayWindow(Xpos_Init + Width - 1, Ypos_Init, Width, Height);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=01 (Horizontal : increment, Vertical : decrement) */
+//    /* AM=0 (address is updated in horizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1010);
+//  }
+//  else if (LCD_Direction == _180_degree)
+//  {
+//    GL_SetDisplayWindow(Xpos_Init + Height - 1, Ypos_Init + Width - 1, Height, Width);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=11 (Horizontal : increment, Vertical : increment) */
+//    /* AM=1 (address is updated in vertical writing direction) */
+//    LCD_WriteReg(R3, 0x1038);
+//  }
+//  else if (LCD_Direction == _270_degree)
+//  {
+//    GL_SetDisplayWindow(Xpos_Init, Ypos_Init + Height - 1, Width, Height);
+//    /* Set GRAM write direction and BGR = 1 */
+//    /* I/D=10 (Horizontal : decrement, Vertical : increment) */
+//    /* AM=0 (address is updated in horizontal writing direction) */
+//    LCD_WriteReg(R3, 0x1020);
+//  }
 
   LCD_SetCursor(Xpos_Init, Ypos_Init);
 
-  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-  {
-    LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
-  }
+//  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//  {
+//    LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
+//  }
 
   for (index = 0;index < area; index++)
   {
     LCD_WriteRAM(color);
   }
 
-  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
-  {
-    if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
-    {
-      GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
-    }
-  }
+//  if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+//  {
+//    if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+//    {
+//      GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+//    }
+//  }
   LCD_Change_Direction(LCD_Direction);
-  GL_SetDisplayWindow(LCD_Height - 1, LCD_Width - 1, LCD_Height, LCD_Width);
+//  GL_SetDisplayWindow(LCD_Height - 1, LCD_Width - 1, LCD_Height, LCD_Width);
 }
 
 /**

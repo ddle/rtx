@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include "LcdHal.h"
 #include "cursor.h"
+#include "cmsis_os.h"
 
 /** @addtogroup Embedded_GUI_Library
   * @{
@@ -43,6 +44,33 @@
   * @brief  Cursor main structure
   */
 Cursor_TypeDef* Cursor;
+/**
+  * @brief  Cursor mem pool
+  */
+osPoolDef (GL_Cursor_MemPool, 8*sizeof(Cursor_TypeDef), Cursor_TypeDef);
+Cursor_TypeDef* AlocMemoryPool_Cursor ()
+{
+  osPoolId   MemPool_Id;
+  Cursor_TypeDef *addr;
+
+  MemPool_Id = osPoolCreate (osPool (GL_Cursor_MemPool));
+  if (MemPool_Id != NULL)
+  {
+    addr = (Cursor_TypeDef *)osPoolAlloc (MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	while(1);
+    	return NULL;
+    }
+  }
+  else
+  {
+	  while(1);
+	  return NULL;
+  }
+}
 
 /**
   * @brief  Header and bitmap image of cursor's symbol
@@ -194,7 +222,9 @@ void CursorReadJoystick(JOY_ReadMode mode)
 ErrorStatus CursorInit(uint8_t *PointerMark)
 {
   /*Allocate memory for cursor structure*/
-  Cursor = (Cursor_TypeDef *)malloc(sizeof(Cursor_TypeDef));
+  //Cursor = (Cursor_TypeDef *)malloc(sizeof(Cursor_TypeDef));
+
+	Cursor = AlocMemoryPool_Cursor();
 
   if (Cursor == (Cursor_TypeDef*)GL_NULL)
   {

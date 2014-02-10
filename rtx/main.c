@@ -43,6 +43,8 @@
 #include "cursor.h"
 #include "graphicObject.h"
 #include "LcdHal.h"
+#include "uiframework.h"
+
 //#include "pictures.h"
 /** @addtogroup STM32F10x_StdPeriph_Template
  * @{
@@ -138,31 +140,43 @@ int main (void) {
 	/* Initialize the LCD */
 	GL_LCD_Init();
 
-	//GL_LCD_DrawRect(100,100,50,50);
-
 	/* Get main thread ID */
 	main_id = osThreadGetId();
 	// uint32_t tick;
-	// int ret;
+
 	/* Create thread X */
 	threadX_id = osThreadCreate(osThread(threadX), NULL);
 	GL_SetTextColor(GL_Black);
 	GL_SetBackColor(GL_White);
 
 	Point pts [3];
-	pts[0].X = 0;
-	pts[0].Y = 0;
+	pts[0].X = 20;
+	pts[0].Y = 20;
 	pts[1].X = 50;
 	pts[1].Y = 100;
 	pts[2].X = LCD_PIXEL_WIDTH;
-	pts[2].Y = 0;
-	pPoint pp = &pts;
+	pts[2].Y = 50;
+	pPoint pp = pts;
 
 	// effect only strings
-	LCD_Change_Direction(_90_degree);
+	LCD_Change_Direction(_0_degree);
 	//GL_SetFont(GL_FONT_BIG);
 	/* Indicate to thread X completion of do-this */
 			//osSignalSet(threadX_id, 0x0004);
+
+
+	 /* Initialize the LCD */
+	  GL_LCD_Init();
+
+	  /*Initialize cursor*/
+	  CursorInit(GL_NULL);
+	  GL_Clear(GL_BackColor);
+
+	  /* Menu */
+	  Show_HomeScreen();
+
+
+
 	for (;;) {    /* do-this */
 
 		/* Wait for completion of do-that */
@@ -176,30 +190,34 @@ int main (void) {
 		//delta++;
 		//LCD_clear_rows(y- 3 -50,y - 3 );
 
-		GL_Clear(GL_BackColor);
-		LCD_DrawRect(x,y,50,100);
-		GL_LCD_DrawCircle(x,y,25);
-		LCD_PrintStringLine(x,y,"ABCD");
-		LCD_DrawLine(x,y,200,Horizontal);
-		LCD_DrawFullRect(x,y,25,25);
-		LCD_DrawFullCircle(x,y,10);
+		//GL_Clear(GL_BackColor);
+//		LCD_DrawRect(x,y,50,100);
+//		GL_LCD_DrawCircle(x,y,25);
+		//LCD_PrintStringLine(x,y,"ABCD");
+//		//LCD_DrawLine(x,y,200,Horizontal);
+		//LCD_DrawFullRect(x,y,25,25);
+		//LCD_DrawFullCircle(x,y,10);
+//
+//		LCD_DrawUniLine(x,y,0,200);
+//		pts[1].X = x;
+//		pts[1].Y = y;
+		//LCD_PolyLine(pp,3);
+		//LCD_ClosedPolyLine(pp,3);
+		//LCD_PolyLineRelative(pp,3);
+		//LCD_FillPolyLine(pp,3);
+		//x = x + 4;
+		//y = y + 4;
 
-		LCD_DrawUniLine(x,y,0,200);
-		pts[1].X = x;
-		pts[1].Y = y;
-		LCD_PolyLine(pp,3);
-
-		x = x + 4;
-		y = y + 4;
-
+		//GL_LCD_DisplayChar(x,y,'A',GL_FALSE);
+		//GL_DisplayAdjStringLine(x,y,"ABCD",GL_TRUE);
 		//osSignalSet(threadX_id, 0x0004);
 
-		if (y == 240)
-		{
-			x = 0;
-			y = 0;
-		}
-		osDelay(60);
+//		if (y == 240)
+//		{
+//			x = 0;
+//			y = 0;
+//		}
+		osDelay(1000);
 
 	}
 }
