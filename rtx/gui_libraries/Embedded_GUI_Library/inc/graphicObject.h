@@ -45,6 +45,8 @@
   * @{
   */
 #define GL_NULL  0x00
+
+#define USE_2D_OBJECTS 1
 /**
   * @}
   */

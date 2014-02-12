@@ -340,7 +340,8 @@ void LCD_Clear(uint16_t Color);
 uint16_t GetPixel(uint16_t Xpos, uint16_t Ypos);
 void lock_buffer();
 void unlock_buffer();
-
+void LCD_WriteRAM_window(uint16_t Color);
+void LCD_update();
 
 
 void LCD_DeInit(void);

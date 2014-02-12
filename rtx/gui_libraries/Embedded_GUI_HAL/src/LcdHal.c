@@ -156,63 +156,150 @@ void GL_Clear(uint16_t Color)
   */
 void GL_LCD_DrawChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
 {
-  uint32_t line_index = 0, pixel_index = 0;
-  uint8_t Xaddress = 0;
-  uint16_t Yaddress = 0;
-  __IO uint16_t tmp_color = 0;
+//  uint32_t line_index = 0, pixel_index = 0;
+//  uint8_t Xaddress = 0;
+//  uint16_t Yaddress = 0;
+//  __IO uint16_t tmp_color = 0;
+//
+//  Xaddress = Xpos;
+//  Yaddress = Ypos;
+//
+//  lock_buffer();
+//  for (line_index = 0; line_index < GL_FontHeight; line_index++)
+//  {
+//    /* SmallFonts have bytes in reverse order */
+//    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << 0)) == 0x00) ||
+//        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> 0)) == 0x00))
+//    {
+//      tmp_color = GL_BackColor;
+//    }
+//    else
+//    {
+//      tmp_color = GL_TextColor;
+//    }
+//
+//    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, FirstPixel);
+//
+//    for (pixel_index = 1; pixel_index < GL_FontWidth - 1; pixel_index++)
+//    {
+//      /* SmallFonts have bytes in reverse order */
+//      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
+//          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
+//      {
+//        tmp_color = GL_BackColor;
+//      }
+//      else
+//      {
+//        tmp_color = GL_TextColor;
+//      }
+//
+//      LCD_PutPixel(Xaddress, Yaddress--, tmp_color, MiddlePixel);
+//    }
+//    pixel_index++;
+//    /* SmallFonts have bytes in reverse order */
+//    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
+//        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
+//    {
+//      tmp_color = GL_BackColor;
+//    }
+//    else
+//    {
+//      tmp_color = GL_TextColor;
+//    }
+//
+//    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, LastPixel);
+//
+//    Xaddress++;
+//    Yaddress = Ypos;
+//  }
+//  unlock_buffer();
 
-  Xaddress = Xpos;
-  Yaddress = Ypos;
+	uint32_t index = 0, counter = 0;
+	  uint16_t Xaddress = 0;
+	  uint16_t Yaddress = 0;
 
-  lock_buffer();
-  for (line_index = 0; line_index < GL_FontHeight; line_index++)
-  {
-    /* SmallFonts have bytes in reverse order */
-    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << 0)) == 0x00) ||
-        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> 0)) == 0x00))
-    {
-      tmp_color = GL_BackColor;
-    }
-    else
-    {
-      tmp_color = GL_TextColor;
-    }
+	  if ((LCD_Direction == _0_degree) || (LCD_Direction == _180_degree))
+	  {
+	    Xaddress = Xpos;
+	    LCD_SetCursor(Xaddress, Ypos);
+	  }
+	  else if ((LCD_Direction == _90_degree) || (LCD_Direction == _270_degree))
+	  {
+	    Yaddress = Ypos;
+	    LCD_SetCursor(Xpos, Yaddress);
+	  }
+	  lock_buffer();
+	  for (index = 0; index < GL_FontHeight; index++)
+	  {
+	//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+	//    {
+	//      LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
+	//    }
+	    for (counter = 0; counter < GL_FontWidth; counter++)
+	    {
+	      /* SmallFonts have bytes in reverse order */
+	      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[index] & (1 << counter)) == 0x00) ||
+	          ( GL_Font == GL_FONT_SMALL && (c[index] & (0x80 >> counter)) == 0x00))
+	      {
+	        LCD_WriteRAM(GL_BackColor);
+	      }
+	      else
+	      {
+	        LCD_WriteRAM(GL_TextColor);
+	      }
 
-    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, FirstPixel);
+	      if (LCD_Direction == _0_degree)
+	      {
+	    	  //Xaddress++;
+	    	  LCD_SetCursor(Xaddress, Ypos - counter); /// TODO: need to correct drawing direction
+	      }
+	      else if (LCD_Direction == _90_degree)
+	      {
+	    	  //Yaddress++;
+	    	  LCD_SetCursor(Xpos + counter, Yaddress);
+	      }
+	      else if (LCD_Direction == _180_degree)
+	      {
+	    	  //Xaddress--;
+	    	  LCD_SetCursor(Xaddress, Ypos + counter);
+	      }
+	      else if (LCD_Direction == _270_degree)
+	      {
+	    	  //Yaddress--;
+	    	  LCD_SetCursor(Xpos - counter, Yaddress);
+	      }
 
-    for (pixel_index = 1; pixel_index < GL_FontWidth - 1; pixel_index++)
-    {
-      /* SmallFonts have bytes in reverse order */
-      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
-          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
-      {
-        tmp_color = GL_BackColor;
-      }
-      else
-      {
-        tmp_color = GL_TextColor;
-      }
+	    }
 
-      LCD_PutPixel(Xaddress, Yaddress--, tmp_color, MiddlePixel);
-    }
-    pixel_index++;
-    /* SmallFonts have bytes in reverse order */
-    if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
-        ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
-    {
-      tmp_color = GL_BackColor;
-    }
-    else
-    {
-      tmp_color = GL_TextColor;
-    }
+	//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+	//    {
+	//      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+	//        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+	//    }
 
-    LCD_PutPixel(Xaddress, Yaddress--, tmp_color, LastPixel);
+	    if (LCD_Direction == _0_degree)
+	    {
+	      Xaddress++;
+	      LCD_SetCursor(Xaddress, Ypos);
+	    }
+	    else if (LCD_Direction == _90_degree)
+	    {
+	      Yaddress++;
+	      LCD_SetCursor(Xpos, Yaddress);
+	    }
+	    else if (LCD_Direction == _180_degree)
+	    {
+	      Xaddress--;
+	      LCD_SetCursor(Xaddress, Ypos);
+	    }
+	    else if (LCD_Direction == _270_degree)
+	    {
+	      Yaddress--;
+	      LCD_SetCursor(Xpos, Yaddress);
+	    }
+	  }
+	  unlock_buffer();
 
-    Xaddress++;
-    Yaddress = Ypos;
-  }
-  unlock_buffer();
 }
 
 /**
@@ -226,32 +313,119 @@ void GL_LCD_DrawChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit c
   */
 void GL_LCD_DrawCharTransparent(uint16_t Xpos, uint16_t Ypos, const uint16_t *c) /* 16bit char */
 {
-  uint32_t line_index = 0, pixel_index = 0;
-  uint8_t Xaddress = 0;
-  uint16_t Yaddress = 0;
+//  uint32_t line_index = 0, pixel_index = 0;
+//  uint8_t Xaddress = 0;
+//  uint16_t Yaddress = 0;
+//
+//  Xaddress = Xpos;
+//  Yaddress = Ypos;
+//  lock_buffer();
+//  for (line_index = 0; line_index < GL_FontHeight; line_index++)
+//  {
+//    for (pixel_index = 0; pixel_index < GL_FontWidth; pixel_index++)
+//    {
+//      /* SmallFonts have bytes in reverse order */
+//      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
+//          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
+//      {
+//        Yaddress--;
+//      }
+//      else
+//      {
+//        LCD_PutPixel(Xaddress, Yaddress--, GL_TextColor, SinglePixel);
+//      }
+//    }
+//    Xaddress++;
+//    Yaddress = Ypos;
+//  }
+//  unlock_buffer();
 
-  Xaddress = Xpos;
-  Yaddress = Ypos;
-  lock_buffer();
-  for (line_index = 0; line_index < GL_FontHeight; line_index++)
-  {
-    for (pixel_index = 0; pixel_index < GL_FontWidth; pixel_index++)
-    {
-      /* SmallFonts have bytes in reverse order */
-      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[line_index] & (1 << pixel_index)) == 0x00) ||
-          ( GL_Font == GL_FONT_SMALL && (((const uint16_t*)c)[line_index] & (0x80 >> pixel_index)) == 0x00))
-      {
-        Yaddress--;
-      }
-      else
-      {
-        LCD_PutPixel(Xaddress, Yaddress--, GL_TextColor, SinglePixel);
-      }
-    }
-    Xaddress++;
-    Yaddress = Ypos;
-  }
-  unlock_buffer();
+	uint32_t index = 0, counter = 0;
+	  uint16_t Xaddress = 0;
+	  uint16_t Yaddress = 0;
+
+	  if ((LCD_Direction == _0_degree) || (LCD_Direction == _180_degree))
+	  {
+	    Xaddress = Xpos;
+	    LCD_SetCursor(Xaddress, Ypos);
+	  }
+	  else if ((LCD_Direction == _90_degree) || (LCD_Direction == _270_degree))
+	  {
+	    Yaddress = Ypos;
+	    LCD_SetCursor(Xpos, Yaddress);
+	  }
+	  lock_buffer();
+	  for (index = 0; index < GL_FontHeight; index++)
+	  {
+	//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+	//    {
+	//      LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
+	//    }
+	    for (counter = 0; counter < GL_FontWidth; counter++)
+	    {
+	      /* SmallFonts have bytes in reverse order */
+	      if (( GL_Font == GL_FONT_BIG   && (((const uint16_t*)c)[index] & (1 << counter)) == 0x00) ||
+	          ( GL_Font == GL_FONT_SMALL && (c[index] & (0x80 >> counter)) == 0x00))
+	      {
+	        //LCD_WriteRAM(GL_BackColor);
+	      }
+	      else
+	      {
+	        LCD_WriteRAM(GL_TextColor);
+	      }
+
+	      if (LCD_Direction == _0_degree)
+	      {
+	    	  //Xaddress++;
+	    	  LCD_SetCursor(Xaddress, Ypos - counter); /// TODO: need to correct drawing direction
+	      }
+	      else if (LCD_Direction == _90_degree)
+	      {
+	    	  //Yaddress++;
+	    	  LCD_SetCursor(Xpos + counter, Yaddress);
+	      }
+	      else if (LCD_Direction == _180_degree)
+	      {
+	    	  //Xaddress--;
+	    	  LCD_SetCursor(Xaddress, Ypos + counter);
+	      }
+	      else if (LCD_Direction == _270_degree)
+	      {
+	    	  //Yaddress--;
+	    	  LCD_SetCursor(Xpos - counter, Yaddress);
+	      }
+
+	    }
+
+	//    if ((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
+	//    {
+	//      if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+	//        GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+	//    }
+
+	    if (LCD_Direction == _0_degree)
+	    {
+	      Xaddress++;
+	      LCD_SetCursor(Xaddress, Ypos);
+	    }
+	    else if (LCD_Direction == _90_degree)
+	    {
+	      Yaddress++;
+	      LCD_SetCursor(Xpos, Yaddress);
+	    }
+	    else if (LCD_Direction == _180_degree)
+	    {
+	      Xaddress--;
+	      LCD_SetCursor(Xaddress, Ypos);
+	    }
+	    else if (LCD_Direction == _270_degree)
+	    {
+	      Yaddress--;
+	      LCD_SetCursor(Xpos, Yaddress);
+	    }
+	  }
+	  unlock_buffer();
+
 }
 
 /**
@@ -328,7 +502,7 @@ void GL_LCD_DisplayChar(uint16_t Line, uint16_t Column, uint8_t Ascii, GL_bool T
   */
 void GL_SetDisplayWindow(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width)
 {
-  LCD_SetDisplayWindow(Xpos, Ypos, Height, Width);
+  LCD_SetDisplayWindow(Ypos, Xpos, Width,Height);
 }
 
 /**
@@ -439,23 +613,28 @@ void GL_DrawBMP(uint8_t* ptrBitmap)
   /* Set GRAM write direction and BGR = 1 */
   /* I/D=00 (Horizontal : decrement, Vertical : decrement) */
   /* AM=1 (address is updated in vertical writing direction) */
-  LCD_WriteReg(R3, 0x1008);
-  LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
+  //LCD_WriteReg(R3, 0x1008);
+  //LCD_WriteRAM_Prepare(); /* Prepare to write GRAM */
 
   /* Read bitmap data and write them to LCD */
+  //LCD_clear_display(GL_BackColor);
+  //LCD_update();
+  lock_buffer();
   for (; uDataAddr < uBmpSize; uDataAddr += 2)
   {
     uBmpData = (uint16_t)(*(ptrBitmap + uDataAddr)) + (uint16_t)((*(ptrBitmap + uDataAddr + 1)) << 8);
-    LCD_WriteRAM( uBmpData );
+    //LCD_WriteRAM_window( (uBmpData > 0)?(GL_TextColor):(GL_BackColor) );
+    LCD_WriteRAM_window( (GL_TextColor) ); // we use only monochrome right now
   }
-
-  if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
-    GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
+  unlock_buffer();
+  //LCD_update();
+  //if ( pLcdHwParam.LCD_Connection_Mode == GL_SPI )
+  //  GL_LCD_CtrlLinesWrite(pLcdHwParam.LCD_Ctrl_Port_NCS, pLcdHwParam.LCD_Ctrl_Pin_NCS, GL_HIGH);
 
   /* Set GRAM write direction and BGR = 1 */
   /* I/D = 01 (Horizontal : increment, Vertical : decrement) */
   /* AM = 1 (address is updated in vertical writing direction) */
-  LCD_WriteReg(R3, 0x1018);
+  //LCD_WriteReg(R3, 0x1018);
 }
 
 /**

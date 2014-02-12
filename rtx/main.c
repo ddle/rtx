@@ -40,10 +40,10 @@
 #include <stdio.h>
 #include "cmsis_os.h"
 #include "gpio.h"
-#include "cursor.h"
-#include "graphicObject.h"
+//#include "cursor.h"
+//#include "graphicObject.h"
 #include "LcdHal.h"
-#include "uiframework.h"
+//#include "uiframework.h"
 
 //#include "pictures.h"
 /** @addtogroup STM32F10x_StdPeriph_Template
@@ -103,6 +103,9 @@ osThreadId threadX_id;
 /* Thread definitions */
 osThreadDef(threadX, osPriorityNormal, 1, 0);
 
+/* for sync buffer access */
+osMutexId lcd_lcd_mutex;
+osMutexDef(lcd_lcd_mutex);
 /*----------------------------------------------------------------------------
  *   Thread X
  *---------------------------------------------------------------------------*/
@@ -114,10 +117,7 @@ void threadX (void const *argument) {
 		//LCD_clear_display(LCD_NO_FRAME_INVERSION);
 		osDelay(40);
 
-		//ret = LCD_update_data(LCD_NO_FRAME_INVERSION);
-		ret = LCD_send_rows(0, LCD_PIXEL_HEIGHT - 1,LCD_NO_FRAME_INVERSION);
-		if (ret == STATUS_LCD_DATA_UPDATED)
-			LCD_display_data(LCD_NO_FRAME_INVERSION);
+		LCD_update();
 
 		/* Indicate to main thread completion of do-that */
 		//osSignalSet(main_id, 0x0004);
@@ -148,6 +148,9 @@ int main (void) {
 	threadX_id = osThreadCreate(osThread(threadX), NULL);
 	GL_SetTextColor(GL_Black);
 	GL_SetBackColor(GL_White);
+	//GL_SetBackColor(GL_White);	GL_SetTextColor(GL_Black);
+
+
 
 	Point pts [3];
 	pts[0].X = 20;
@@ -158,22 +161,46 @@ int main (void) {
 	pts[2].Y = 50;
 	pPoint pp = pts;
 
+	GL_Clear(GL_BackColor);
+	//LCD_update();
 	// effect only strings
 	LCD_Change_Direction(_0_degree);
+	//LCD_Change_Direction_2(_90_degree);
+	//LCD_DrawLine(100,100,100,Horizontal);
+	//LCD_DrawLine(200,100,100,Horizontal);
+	//LCD_DrawRect(x,y,50,70);
+	//LCD_update();
+	//LCD_DrawCircle(x,y,50);
+	//Set_LCD_Resolution(400,240);
 	//GL_SetFont(GL_FONT_BIG);
 	/* Indicate to thread X completion of do-this */
-			//osSignalSet(threadX_id, 0x0004);
+	//osSignalSet(threadX_id, 0x0004);
+	//GL_Clear(GL_BackColor);
+
+	CursorInit(GL_NULL);
+	//GL_Clear(GL_BackColor);
 
 
-	 /* Initialize the LCD */
-	  GL_LCD_Init();
+	//Show_HomeScreen();
 
-	  /*Initialize cursor*/
-	  CursorInit(GL_NULL);
-	  GL_Clear(GL_BackColor);
+	GL_Page_TypeDef page1;
+	Create_PageObj( &page1 );
+	GL_PageControls_TypeDef* pageLabel = NewLabel( "pageLabel", "Graphic Library", GL_RIGHT_VERTICAL, GL_FONT_BIG, GL_Black);
+	AddPageControlObj(50,50,pageLabel, &page1);
 
-	  /* Menu */
-	  Show_HomeScreen();
+	//GL_PageControls_TypeDef* Button1 = NewButton( "Button1", "BUTTON1", NullFunc );
+	//AddPageControlObj(100,100, Button1, &page1);
+//	GL_PageControls_TypeDef* Button2 = NewButton( "Button2", "BUTTON2", NullFunc );
+//	AddPageControlObj((uint16_t)((LCD_Width/10)*6),(uint8_t)((LCD_Height/9)*7), Button2, &page1);
+
+
+	/* Declares & initiates a GraphChart Object and add it with specified coordinates toa Page Object */
+	//int16_t MyChartPoints[24] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24};
+	//GL_PageControls_TypeDef* MyGraphChart = NewGraphChart("MyGraphChart", "Hours", "Wh", MyChartPoints, 24, GL_TRUE);
+	//AddPageControlObj( 0, 0, MyGraphChart, &page1 );
+
+	page1.ShowPage( &page1, GL_TRUE );
+
 
 
 
@@ -189,35 +216,41 @@ int main (void) {
 		//delta = delta >> 6;
 		//delta++;
 		//LCD_clear_rows(y- 3 -50,y - 3 );
-
-		//GL_Clear(GL_BackColor);
-//		LCD_DrawRect(x,y,50,100);
-//		GL_LCD_DrawCircle(x,y,25);
-		//LCD_PrintStringLine(x,y,"ABCD");
-//		//LCD_DrawLine(x,y,200,Horizontal);
-		//LCD_DrawFullRect(x,y,25,25);
-		//LCD_DrawFullCircle(x,y,10);
-//
-//		LCD_DrawUniLine(x,y,0,200);
-//		pts[1].X = x;
-//		pts[1].Y = y;
+/*
+		GL_Clear(GL_BackColor);
+				LCD_DrawRect(x,y,50,70);
+				GL_LCD_DrawCircle(x,y,35);
+		LCD_PrintStringLine(x+ 5,y,"ABCD");
+		//		//LCD_DrawLine(x,y,200,Horizontal);
+		LCD_DrawFullRect(x+60,y+60,25,25);
+		LCD_DrawFullCircle(x,y,10);
+		//
+		//		LCD_DrawUniLine(x,y,0,200);
+				pts[1].X = x;
+				pts[1].Y = y;
 		//LCD_PolyLine(pp,3);
 		//LCD_ClosedPolyLine(pp,3);
 		//LCD_PolyLineRelative(pp,3);
 		//LCD_FillPolyLine(pp,3);
-		//x = x + 4;
-		//y = y + 4;
+		x = x + 4;
+		y = y + 2;
 
 		//GL_LCD_DisplayChar(x,y,'A',GL_FALSE);
 		//GL_DisplayAdjStringLine(x,y,"ABCD",GL_TRUE);
 		//osSignalSet(threadX_id, 0x0004);
 
-//		if (y == 240)
-//		{
-//			x = 0;
-//			y = 0;
-//		}
-		osDelay(1000);
+				if (y == 240)
+				{
+					x = 0;
+					y = 0;
+				}
+*/
+
+		osDelay(100);
+		//pageLabel->objCoordinates.MinX = x;
+		//pageLabel->objCoordinates.MinY = y;
+		//RefreshPage(&page1);
+
 
 	}
 }

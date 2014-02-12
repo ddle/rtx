@@ -83,6 +83,9 @@ extern __IO uint32_t u32_TSYCoordinate;
 
 
 /** prepare some memory pools
+ *
+ * XXX: How much memory do you have ???
+ *
   * @}
   */
 
@@ -96,19 +99,52 @@ void mem_pool_error()
 // pControlObj = (GL_Label_TypeDef *)malloc(sizeof(GL_Label_TypeDef));
 //GL_PageControls_TypeDef
 //GL_Button_TypeDef
+//GL_GraphChart_TypeDef
 osPoolDef (GL_Coordinate_MemPool, 8*sizeof(GL_Coordinate_TypeDef), GL_Coordinate_TypeDef);
-osPoolDef (GL_Label_MemPool, 8*sizeof(GL_Label_TypeDef), GL_Label_TypeDef);
-osPoolDef (GL_PageControls_MemPool, 8*sizeof(GL_PageControls_TypeDef), GL_PageControls_TypeDef);
-osPoolDef (GL_Button_MemPool, 8*sizeof(GL_Button_TypeDef), GL_Button_TypeDef);
+osPoolDef (GL_Label_MemPool, 100*sizeof(GL_Label_TypeDef), GL_Label_TypeDef);
+osPoolDef (GL_PageControls_MemPool, 1*sizeof(GL_PageControls_TypeDef), GL_PageControls_TypeDef);
+//osPoolDef (GL_Button_MemPool, sizeof(GL_Button_TypeDef), GL_Button_TypeDef);
+osPoolDef (GL_GraphChart_MemPool, sizeof(GL_GraphChart_TypeDef), GL_GraphChart_TypeDef);
+
+osPoolId GraphChart_MemPool_Id = NULL;
+osPoolId Coordinate_MemPool_Id = NULL;
+osPoolId Label_MemPool_Id = NULL;
+osPoolId PageControls_MemPool_Id = NULL;
+osPoolId Button_MemPool_Id = NULL;
+
+GL_GraphChart_TypeDef* AlocMemoryPool_GL_GraphChart ()
+{
+  //osPoolId   MemPool_Id;
+
+	GL_GraphChart_TypeDef *addr;
+  if(GraphChart_MemPool_Id == NULL)
+	  //GraphChart_MemPool_Id = osPoolCreate (osPool (GL_GraphChart_MemPool));
+  if (GraphChart_MemPool_Id != NULL)
+  {
+    addr = (GL_GraphChart_TypeDef *)osPoolAlloc (GraphChart_MemPool_Id);
+    if (addr != NULL)
+      return addr;
+    else
+    {
+    	mem_pool_error();
+    	return NULL;
+    }
+  }
+  else
+  {
+	  mem_pool_error();
+	  return NULL;
+  }
+}
 GL_Button_TypeDef* AlocMemoryPool_GL_Button ()
 {
-  osPoolId   MemPool_Id;
+  //osPoolId   MemPool_Id;
   GL_Button_TypeDef *addr;
-
-  MemPool_Id = osPoolCreate (osPool (GL_Button_MemPool));
-  if (MemPool_Id != NULL)
+  if(Button_MemPool_Id == NULL)
+	  //Button_MemPool_Id = osPoolCreate (osPool (GL_Button_MemPool));
+  if (Button_MemPool_Id != NULL)
   {
-    addr = (GL_Button_TypeDef *)osPoolAlloc (MemPool_Id);
+    addr = (GL_Button_TypeDef *)osPoolAlloc (Button_MemPool_Id);
     if (addr != NULL)
       return addr;
     else
@@ -127,13 +163,13 @@ GL_Button_TypeDef* AlocMemoryPool_GL_Button ()
 
 GL_PageControls_TypeDef* AlocMemoryPool_GL_PageControls ()
 {
-  osPoolId   MemPool_Id;
+  //osPoolId   MemPool_Id;
   GL_PageControls_TypeDef *addr;
-
-  MemPool_Id = osPoolCreate (osPool (GL_PageControls_MemPool));
-  if (MemPool_Id != NULL)
+  if(PageControls_MemPool_Id == NULL)
+	  PageControls_MemPool_Id = osPoolCreate (osPool (GL_PageControls_MemPool));
+  if (PageControls_MemPool_Id != NULL)
   {
-    addr = (GL_PageControls_TypeDef *)osPoolAlloc (MemPool_Id);
+    addr = (GL_PageControls_TypeDef *)osPoolAlloc (PageControls_MemPool_Id);
     if (addr != NULL)
       return addr;
     else
@@ -151,13 +187,13 @@ GL_PageControls_TypeDef* AlocMemoryPool_GL_PageControls ()
 
 GL_Label_TypeDef* AlocMemoryPool_GL_Label ()
 {
-  osPoolId   MemPool_Id;
+  //osPoolId   MemPool_Id;
   GL_Label_TypeDef *addr;
-
-  MemPool_Id = osPoolCreate (osPool (GL_Label_MemPool));
-  if (MemPool_Id != NULL)
+  if(Label_MemPool_Id == NULL)
+	  Label_MemPool_Id = osPoolCreate (osPool (GL_Label_MemPool));
+  if (Label_MemPool_Id != NULL)
   {
-    addr = (GL_Label_TypeDef *)osPoolAlloc (MemPool_Id);
+    addr = (GL_Label_TypeDef *)osPoolAlloc (Label_MemPool_Id);
     if (addr != NULL)
       return addr;
     else
@@ -174,13 +210,13 @@ GL_Label_TypeDef* AlocMemoryPool_GL_Label ()
 }
 GL_Coordinate_TypeDef* AlocMemoryPool_GL_Coordinate ()
 {
-  osPoolId   MemPool_Id;
+  //osPoolId   MemPool_Id;
   GL_Coordinate_TypeDef *addr;
-
-  MemPool_Id = osPoolCreate (osPool (GL_Coordinate_MemPool));
-  if (MemPool_Id != NULL)
+  if(Coordinate_MemPool_Id == NULL)
+	  Coordinate_MemPool_Id = osPoolCreate (osPool (GL_Coordinate_MemPool));
+  if (Coordinate_MemPool_Id != NULL)
   {
-    addr = (GL_Coordinate_TypeDef *)osPoolAlloc (MemPool_Id);
+    addr = (GL_Coordinate_TypeDef *)osPoolAlloc (Coordinate_MemPool_Id);
     if (addr != NULL)
       return addr;
     else
@@ -319,11 +355,12 @@ static void GL_DrawFilledRectangle(uint16_t maxX, uint16_t minX, uint8_t maxY, u
     GL_DrawLine(minY, (maxX - (maxX - minX) + 1), maxY - minY, GL_Vertical);
   }
 
-  GL_SetTextColor(Color);
+  //GL_SetTextColor(Color);
   for (counter = 1; counter < (maxY - minY); counter++)
   {
     GL_DrawLine(minY + counter, maxX - 1, maxX - minX - 2, GL_Horizontal);
   }
+	//LCD_DrawFullRect(maxX, maxY, maxY - minY, maxX - minX)
 }
 
 /**
@@ -499,7 +536,7 @@ void GL_Cross(uint16_t Ypos, uint16_t Xpos)
   */
 void GL_DrawButtonBMP(uint16_t maxX, uint16_t minX, uint16_t maxY, uint16_t minY, uint8_t* ptrBitmap)
 {
-  GL_SetDisplayWindow(maxY, maxX, maxY - minY, maxX - minX);
+  GL_SetDisplayWindow(maxX, maxY, maxY - minY, maxX - minX);
   GL_DrawBMP(ptrBitmap);
   GL_SetDisplayWindow(LCD_Height - 1, LCD_Width - 1, LCD_Height, LCD_Width);
 }
@@ -1020,7 +1057,8 @@ GL_PageControls_TypeDef* NewGraphChart ( uint16_t ID, const uint8_t* labelX, con
   GL_PageControls_TypeDef *pPageControlObj = NULL;
   GL_GraphChart_TypeDef *pControlObj = NULL;
 
-  pControlObj = (GL_GraphChart_TypeDef *)malloc(sizeof(GL_GraphChart_TypeDef));
+  //pControlObj = (GL_GraphChart_TypeDef *)malloc(sizeof(GL_GraphChart_TypeDef));
+  pControlObj = AlocMemoryPool_GL_GraphChart();
 
   if (pControlObj)
   {
@@ -1047,7 +1085,8 @@ GL_PageControls_TypeDef* NewGraphChart ( uint16_t ID, const uint8_t* labelX, con
     /* Create the Graphical Chart object */
     Create_GraphChart(pControlObj);
 
-    pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    //pPageControlObj = (GL_PageControls_TypeDef*)malloc(sizeof(GL_PageControls_TypeDef));
+    pPageControlObj  = AlocMemoryPool_GL_PageControls();
     if ( pPageControlObj )
     {
       pPageControlObj->objPTR = (void*)pControlObj;
@@ -2096,6 +2135,9 @@ static GL_ErrStatus SetButtonVisible(GL_PageControls_TypeDef* pTmp, GL_Coordinat
   {
     for ( ; n < LabelLength && (objCoordinates.MaxX - ((n + 1)*BUTTON_SLICE_LENGTH)) > BUTTON_SLICE_LENGTH + 1; n++)
     {
+
+      //void GL_DrawButtonBMP(uint16_t maxX, uint16_t minX, uint16_t maxY, uint16_t minY, uint8_t* ptrBitmap)
+    //	GL_SetDisplayWindow(maxY, MaxX - (n*BUTTON_SLICE_LENGTH), 26, 8);
       GL_DrawButtonBMP( (uint16_t)(objCoordinates.MaxX - (n*BUTTON_SLICE_LENGTH)),
                         (uint16_t)(objCoordinates.MaxX - ((n + 1)*BUTTON_SLICE_LENGTH)),
                         (uint8_t)(objCoordinates.MaxY),

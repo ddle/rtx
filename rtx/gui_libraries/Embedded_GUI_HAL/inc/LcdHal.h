@@ -221,6 +221,7 @@ uint16_t GL_LCD_ReadRAM(void);
 void LCD_WriteRAMWord(uint16_t RGB_Code);
 
 void LCD_Change_Direction(LCD_Direction_TypeDef Direction);
+void LCD_Change_Direction_2(LCD_Direction_TypeDef Direction);
 void LCD_WriteChar(uint16_t Xpos, uint16_t Ypos, const uint16_t *c);
 void LCD_PrintChar(uint16_t Line, uint16_t Column, uint8_t Ascii);
 void LCD_PrintStringLine(uint16_t Line, uint16_t Column, uint8_t *ptr);

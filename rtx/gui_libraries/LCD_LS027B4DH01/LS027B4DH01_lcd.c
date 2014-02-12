@@ -32,9 +32,9 @@
  * ...
  *
  * */
-
-static uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1] = {};
-uint16_t buf_xpos, buf_ypos;
+static volatile uint8_t lcd_buffer[LCD_PIXEL_HEIGHT][LCD_PIXEL_WIDTH/8 + 1] = {};
+static uint16_t buf_xpos, buf_ypos; /* buffer indexing variables */
+static uint16_t window_xpos, window_ypos, window_height, window_width; /* draw-window variables */
 
 /* for sync buffer access */
 osMutexId lcd_buffer_mutex;
@@ -387,22 +387,37 @@ void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos)
 //	{
 //		return;
 //	}
+	uint16_t tx, ty;
 
 	if((int16_t) Xpos < 0) /// negative check
-		buf_xpos = 0;
+		tx = 0;
 	else if (Xpos >= LCD_PIXEL_WIDTH)
-		buf_xpos = LCD_PIXEL_WIDTH - 1;
+		tx = LCD_PIXEL_WIDTH - 1;
 	else
-		buf_xpos = Xpos;
+		tx = Xpos;
 
 	if((int16_t)Ypos < 0)
-		buf_ypos = 0;
+		ty = 0;
 	else if (Ypos >= LCD_PIXEL_HEIGHT)
-		buf_ypos = LCD_PIXEL_HEIGHT - 1;
+		ty = LCD_PIXEL_HEIGHT - 1;
 	else
-		buf_ypos = Ypos;
-}
+		ty = Ypos;
 
+	buf_xpos = tx;
+	buf_ypos = ty;
+}
+/**
+ * @brief  refresh buffer and data display on LCD
+ * @param  none
+ * @retval None
+ */
+void LCD_update()
+{
+
+	LCD_send_rows(0, LCD_PIXEL_HEIGHT - 1,LCD_NO_FRAME_INVERSION);
+	//if (ret == STATUS_LCD_DATA_UPDATED)
+	//	LCD_display_data(LCD_NO_FRAME_INVERSION);
+}
 
 /**
  * @brief  Displays a line.
@@ -414,33 +429,58 @@ void LCD_SetCursor(uint16_t Xpos, uint16_t Ypos)
  *   NOTE: drawing starts (xPos,yPos) at the left/bottom of the line
  * @retval None
  */
-void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
+void LCD_DrawLine(uint16_t Xpos, uint16_t Ypos, uint16_t Length, uint8_t Direction)
 {
+
 	uint32_t i = 0;
-	//uint16_t x,y;
+	  LCD_SetCursor(Xpos, Ypos);
 
-	osMutexWait(lcd_buffer_mutex, osWaitForever);
+	  if(Direction == LCD_DIR_HORIZONTAL)
+	  {
+	    for(i = 0; i < Length; i++)
+	    {
+	      LCD_WriteRAM(TextColor);
+	      Ypos--;
+	      //LCD_SetCursor(Xpos, Ypos);
+	      LCD_SetCursor(Xpos, Ypos);
+	    }
+	  }
+	  else
+	  {
+	    for(i = 0; i < Length; i++)
+	    {
+	      LCD_WriteRAM(TextColor);
+	      Xpos++;
+	      //LCD_SetCursor(Xpos, Ypos);
+	      LCD_SetCursor(Xpos, Ypos);
+	    }
+	  }
 
-	LCD_SetCursor(x, y);
-	if(Direction == LCD_DIR_HORIZONTAL)
-	{
-		for(i = 0; i < Length; i++)
-		{
-			LCD_WriteRAM(TextColor);
-			x++;
-			LCD_SetCursor(x, y);
-		}
-	}
-	else
-	{
-		for(i = 0; i < Length; i++)
-		{
-			LCD_WriteRAM(TextColor);
-			y++;//x++;
-			LCD_SetCursor(x, y);
-		}
-	}
-	osMutexRelease(lcd_buffer_mutex);
+//	uint32_t i = 0;
+//	//uint16_t x,y;
+//
+//	osMutexWait(lcd_buffer_mutex, osWaitForever);
+//
+//	LCD_SetCursor(x, y);
+//	if(Direction == LCD_DIR_HORIZONTAL)
+//	{
+//		for(i = 0; i < Length; i++)
+//		{
+//			LCD_WriteRAM(TextColor);
+//			x++;
+//			LCD_SetCursor(x, y);
+//		}
+//	}
+//	else
+//	{
+//		for(i = 0; i < Length; i++)
+//		{
+//			LCD_WriteRAM(TextColor);
+//			y++;//x++;
+//			LCD_SetCursor(x, y);
+//		}
+//	}
+//	osMutexRelease(lcd_buffer_mutex);
 }
 
 
@@ -454,16 +494,16 @@ void LCD_DrawLine(uint16_t x, uint16_t y, uint16_t Length, uint8_t Direction)
  */
 void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
 {
-//	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
-//	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
-//
-//	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
-//	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
-
 	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
-	LCD_DrawLine(Xpos, Ypos + Height, Width, LCD_DIR_HORIZONTAL);
+	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
+
 	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
-	LCD_DrawLine(Xpos + Width, Ypos, Height, LCD_DIR_VERTICAL);
+	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
+//
+//	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+//	LCD_DrawLine(Xpos, Ypos + Height, Width, LCD_DIR_HORIZONTAL);
+//	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+//	LCD_DrawLine(Xpos + Width, Ypos, Height, LCD_DIR_VERTICAL);
 }
 
 /**
@@ -486,6 +526,47 @@ void LCD_WriteRAM(uint16_t Color)
 	lcd_buffer[buf_ypos][0] = 1;
 }
 
+/**
+ * @brief  set color bit and dirty bit in our RAM buffer, limit to the window set by LCD_SetDisplayWindow
+ *         Also automatically increase buffer indexing from left-right, bottom -> top
+ * @param  Color: color to be set
+ * @retval None
+ */
+void LCD_WriteRAM_window(uint16_t Color)
+{
+	/* implying left to right drawing */
+	static uint16_t curX=0,curY=0;
+
+
+	if (Color == LCD_COLOR_BLACK)
+	{
+		lcd_buffer[buf_ypos][(buf_xpos >> 3) + 1] |= (0x01 << (7 - (buf_xpos & 0x07)));
+	}
+	else
+	{
+		lcd_buffer[buf_ypos][(buf_xpos >> 3) + 1] &=~ (0x01 << (7 - (buf_xpos & 0x07)));
+	}
+	/* set dirty bit */
+	lcd_buffer[buf_ypos][0] = 1;
+
+	/* recalculate drawing window */
+	if (curY < window_width  - 1)
+	{
+		//buf_xpos++;
+		curY++;
+		if (buf_xpos > 0)
+			buf_xpos--;
+	}
+	else
+	{
+		curY = 0;
+		buf_xpos = window_xpos;
+		if (buf_ypos > 0)
+			buf_ypos--;
+	}
+	//(buf_xpos < (LCD_PIXEL_WIDTH - 1)) &&
+
+}
 
 
 /**
@@ -712,6 +793,11 @@ void LCD_DisplayStringLine(uint8_t Line, uint8_t *ptr)
  */
 void LCD_SetDisplayWindow(uint8_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t Width)
 {
+	window_height = Height;
+	window_width = Width;
+	window_xpos = Xpos;
+	window_ypos = Ypos;
+
 //	if((LCDType == LCD_ILI9320) || (LCDType == LCD_SPFD5408))
 //	{
 //		/* Horizontal GRAM Start Address */
@@ -750,7 +836,7 @@ void LCD_SetDisplayWindow(uint8_t Xpos, uint16_t Ypos, uint8_t Height, uint16_t 
 //		LCD_WriteReg(LCD_REG_73, ((Ypos & 0x100)>> 8));
 //		LCD_WriteReg(LCD_REG_74, (Ypos & 0xFF));
 //	}
-//	LCD_SetCursor(Xpos, Ypos);
+	LCD_SetCursor(Xpos, Ypos);
 }
 
 
@@ -950,26 +1036,48 @@ void LCD_DrawBMP(uint32_t BmpAddress)
  */
 void LCD_DrawFullRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height)
 {
+//	//LCD_SetTextColor(TextColor);
+//
+////	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+////	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
+////
+////	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+////	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
+//
+//	//Width -= 2;
+//	//Height--;
+//	//Ypos--;
+//
+//	//LCD_SetTextColor(BackColor);
+//
+//	while(Height--)
+//	{
+//		LCD_DrawLine(Xpos, Ypos++, Width, LCD_DIR_HORIZONTAL);
+//	}
+//
+//	//LCD_SetTextColor(color);
+
 	//LCD_SetTextColor(TextColor);
 
-//	LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
-//	LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
-//
-//	LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
-//	LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
+	  LCD_DrawLine(Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+	  LCD_DrawLine((Xpos + Height), Ypos, Width, LCD_DIR_HORIZONTAL);
 
-	//Width -= 2;
-	//Height--;
-	//Ypos--;
+	  LCD_DrawLine(Xpos, Ypos, Height, LCD_DIR_VERTICAL);
+	  LCD_DrawLine(Xpos, (Ypos - Width + 1), Height, LCD_DIR_VERTICAL);
 
-	//LCD_SetTextColor(BackColor);
+	  Width -= 2;
+	  Height--;
+	  Ypos--;
+	  uint16_t color = TextColor;
+	  //LCD_SetTextColor(BackColor);
 
-	while(Height--)
-	{
-		LCD_DrawLine(Xpos, Ypos++, Width, LCD_DIR_HORIZONTAL);
-	}
+	  while(Height--)
+	  {
+	    LCD_DrawLine(++Xpos, Ypos, Width, LCD_DIR_HORIZONTAL);
+	  }
 
-	//LCD_SetTextColor(color);
+	  //LCD_SetTextColor(color);
+
 }
 
 /**
@@ -996,18 +1104,18 @@ void LCD_DrawFullCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius)
 	{
 		if(CurY > 0)
 		{
-			//LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
-			//LCD_DrawLine(Xpos + CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos - CurY, Ypos - CurX, 2*CurY, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurY, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos + CurX, Ypos + CurY, 2*CurY, LCD_DIR_HORIZONTAL);
+//			LCD_DrawLine(Xpos - CurY, Ypos - CurX, 2*CurY, LCD_DIR_HORIZONTAL);
+//			LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurY, LCD_DIR_HORIZONTAL);
 		}
 
 		if(CurX > 0)
 		{
-			//LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
-			//LCD_DrawLine(Xpos + CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos - CurX, Ypos - CurY, 2*CurX, LCD_DIR_HORIZONTAL);
-			LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurX, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos - CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
+			LCD_DrawLine(Xpos + CurY, Ypos + CurX, 2*CurX, LCD_DIR_HORIZONTAL);
+//			LCD_DrawLine(Xpos - CurX, Ypos - CurY, 2*CurX, LCD_DIR_HORIZONTAL);
+//			LCD_DrawLine(Xpos - CurX, Ypos + CurY, 2*CurX, LCD_DIR_HORIZONTAL);
 		}
 		if (D < 0)
 		{
@@ -1235,110 +1343,209 @@ void LCD_DrawLine_old(uint8_t Xpos, uint16_t Ypos, uint16_t Length, uint8_t Dire
  */
 void LCD_FillPolyLine(pPoint Points, uint16_t PointCount)
 {
+
+//	/*  public-domain code by Darel Rex Finley, 2007 */
+//	uint16_t  nodes = 0, nodeX[MAX_POLY_CORNERS], pixelX = 0, pixelY = 0, i = 0,
+//			j = 0, swap = 0;
+//	uint16_t  IMAGE_LEFT = 0, IMAGE_RIGHT = 0, IMAGE_TOP = 0, IMAGE_BOTTOM = 0;
+//
+//	IMAGE_LEFT = IMAGE_RIGHT = Points->X;
+//	IMAGE_TOP= IMAGE_BOTTOM = Points->Y;
+//
+//	for(i = 1; i < PointCount; i++)
+//	{
+//		pixelX = POLY_X(i);
+//		if(pixelX < IMAGE_LEFT)
+//		{
+//			IMAGE_LEFT = pixelX;
+//		}
+//		if(pixelX > IMAGE_RIGHT)
+//		{
+//			IMAGE_RIGHT = pixelX;
+//		}
+//
+//		pixelY = POLY_Y(i);
+//		if(pixelY < IMAGE_TOP)
+//		{
+//			IMAGE_TOP = pixelY;
+//		}
+//		if(pixelY > IMAGE_BOTTOM)
+//		{
+//			IMAGE_BOTTOM = pixelY;
+//		}
+//	}
+//
+//	uint16_t color =  TextColor;
+//	LCD_SetTextColor(BackColor);
+//
+//	/*  Loop through the rows of the image. */
+//	for (pixelY = IMAGE_TOP; pixelY < IMAGE_BOTTOM; pixelY++)
+//	{
+//		/* Build a list of nodes. */
+//		nodes = 0; j = PointCount-1;
+//
+//		for (i = 0; i < PointCount; i++)
+//		{
+//			if (POLY_Y(i)<(double) pixelY && POLY_Y(j)>=(double) pixelY || POLY_Y(j)<(double) pixelY && POLY_Y(i)>=(double) pixelY)
+//			{
+//				nodeX[nodes++]=(int) (POLY_X(i)+((pixelY-POLY_Y(i))*(POLY_X(j)-POLY_X(i)))/(POLY_Y(j)-POLY_Y(i)));
+//			}
+//			j = i;
+//		}
+//
+//		/* Sort the nodes, via a simple "Bubble" sort. */
+//		i = 0;
+//		while (i < nodes-1)
+//		{
+//			if (nodeX[i]>nodeX[i+1])
+//			{
+//				swap = nodeX[i];
+//				nodeX[i] = nodeX[i+1];
+//				nodeX[i+1] = swap;
+//				if(i)
+//				{
+//					i--;
+//				}
+//			}
+//			else
+//			{
+//				i++;
+//			}
+//		}
+//
+//		/*  Fill the pixels between node pairs. */
+//		for (i = 0; i < nodes; i+=2)
+//		{
+//			if(nodeX[i] >= IMAGE_RIGHT)
+//			{
+//				break;
+//			}
+//			if(nodeX[i+1] > IMAGE_LEFT)
+//			{
+//				if (nodeX[i] < IMAGE_LEFT)
+//				{
+//					nodeX[i]=IMAGE_LEFT;
+//				}
+//				if(nodeX[i+1] > IMAGE_RIGHT)
+//				{
+//					nodeX[i+1] = IMAGE_RIGHT;
+//				}
+//				LCD_SetTextColor(BackColor);
+//				LCD_DrawLine(pixelY, nodeX[i+1], nodeX[i+1] - nodeX[i], LCD_DIR_HORIZONTAL);
+//				LCD_SetTextColor(color);
+//				osMutexWait(lcd_buffer_mutex, osWaitForever);
+//					LCD_SetCursor(pixelY, nodeX[i+1]);
+//					LCD_WriteRAM(TextColor);
+//					LCD_SetCursor(pixelY, nodeX[i]);
+//					LCD_WriteRAM(TextColor);
+//				osMutexRelease(lcd_buffer_mutex);
+//
+//
+//				/* for (j=nodeX[i]; j<nodeX[i+1]; j++) PutPixel(j,pixelY); */
+//			}
+//		}
+//	}
+//
+//	/* draw the edges */
+//	LCD_SetTextColor(color);
+
 	/*  public-domain code by Darel Rex Finley, 2007 */
-	uint16_t  nodes = 0, nodeX[MAX_POLY_CORNERS], pixelX = 0, pixelY = 0, i = 0,
-			j = 0, swap = 0;
-	uint16_t  IMAGE_LEFT = 0, IMAGE_RIGHT = 0, IMAGE_TOP = 0, IMAGE_BOTTOM = 0;
+	  uint16_t  nodes = 0, nodeX[MAX_POLY_CORNERS], pixelX = 0, pixelY = 0, i = 0,
+	  j = 0, swap = 0;
+	  uint16_t  IMAGE_LEFT = 0, IMAGE_RIGHT = 0, IMAGE_TOP = 0, IMAGE_BOTTOM = 0;
 
-	IMAGE_LEFT = IMAGE_RIGHT = Points->X;
-	IMAGE_TOP= IMAGE_BOTTOM = Points->Y;
+	  IMAGE_LEFT = IMAGE_RIGHT = Points->X;
+	  IMAGE_TOP= IMAGE_BOTTOM = Points->Y;
 
-	for(i = 1; i < PointCount; i++)
-	{
-		pixelX = POLY_X(i);
-		if(pixelX < IMAGE_LEFT)
-		{
-			IMAGE_LEFT = pixelX;
-		}
-		if(pixelX > IMAGE_RIGHT)
-		{
-			IMAGE_RIGHT = pixelX;
-		}
+	  for(i = 1; i < PointCount; i++)
+	  {
+	    pixelX = POLY_X(i);
+	    if(pixelX < IMAGE_LEFT)
+	    {
+	      IMAGE_LEFT = pixelX;
+	    }
+	    if(pixelX > IMAGE_RIGHT)
+	    {
+	      IMAGE_RIGHT = pixelX;
+	    }
 
-		pixelY = POLY_Y(i);
-		if(pixelY < IMAGE_TOP)
-		{
-			IMAGE_TOP = pixelY;
-		}
-		if(pixelY > IMAGE_BOTTOM)
-		{
-			IMAGE_BOTTOM = pixelY;
-		}
-	}
+	    pixelY = POLY_Y(i);
+	    if(pixelY < IMAGE_TOP)
+	    {
+	      IMAGE_TOP = pixelY;
+	    }
+	    if(pixelY > IMAGE_BOTTOM)
+	    {
+	      IMAGE_BOTTOM = pixelY;
+	    }
+	  }
 
-	uint16_t color =  TextColor;
-	LCD_SetTextColor(BackColor);
+	  LCD_SetTextColor(BackColor);
 
-	/*  Loop through the rows of the image. */
-	for (pixelY = IMAGE_TOP; pixelY < IMAGE_BOTTOM; pixelY++)
-	{
-		/* Build a list of nodes. */
-		nodes = 0; j = PointCount-1;
+	  /*  Loop through the rows of the image. */
+	  for (pixelY = IMAGE_TOP; pixelY < IMAGE_BOTTOM; pixelY++)
+	  {
+	    /* Build a list of nodes. */
+	    nodes = 0; j = PointCount-1;
 
-		for (i = 0; i < PointCount; i++)
-		{
-			if (POLY_Y(i)<(double) pixelY && POLY_Y(j)>=(double) pixelY || POLY_Y(j)<(double) pixelY && POLY_Y(i)>=(double) pixelY)
-			{
-				nodeX[nodes++]=(int) (POLY_X(i)+((pixelY-POLY_Y(i))*(POLY_X(j)-POLY_X(i)))/(POLY_Y(j)-POLY_Y(i)));
-			}
-			j = i;
-		}
+	    for (i = 0; i < PointCount; i++)
+	    {
+	      if (POLY_Y(i)<(double) pixelY && POLY_Y(j)>=(double) pixelY || POLY_Y(j)<(double) pixelY && POLY_Y(i)>=(double) pixelY)
+	      {
+	        nodeX[nodes++]=(int) (POLY_X(i)+((pixelY-POLY_Y(i))*(POLY_X(j)-POLY_X(i)))/(POLY_Y(j)-POLY_Y(i)));
+	      }
+	      j = i;
+	    }
 
-		/* Sort the nodes, via a simple "Bubble" sort. */
-		i = 0;
-		while (i < nodes-1)
-		{
-			if (nodeX[i]>nodeX[i+1])
-			{
-				swap = nodeX[i];
-				nodeX[i] = nodeX[i+1];
-				nodeX[i+1] = swap;
-				if(i)
-				{
-					i--;
-				}
-			}
-			else
-			{
-				i++;
-			}
-		}
+	    /* Sort the nodes, via a simple "Bubble" sort. */
+	    i = 0;
+	    while (i < nodes-1)
+	    {
+	      if (nodeX[i]>nodeX[i+1])
+	      {
+	        swap = nodeX[i];
+	        nodeX[i] = nodeX[i+1];
+	        nodeX[i+1] = swap;
+	        if(i)
+	        {
+	          i--;
+	        }
+	      }
+	      else
+	      {
+	        i++;
+	      }
+	    }
 
-		/*  Fill the pixels between node pairs. */
-		for (i = 0; i < nodes; i+=2)
-		{
-			if(nodeX[i] >= IMAGE_RIGHT)
-			{
-				break;
-			}
-			if(nodeX[i+1] > IMAGE_LEFT)
-			{
-				if (nodeX[i] < IMAGE_LEFT)
-				{
-					nodeX[i]=IMAGE_LEFT;
-				}
-				if(nodeX[i+1] > IMAGE_RIGHT)
-				{
-					nodeX[i+1] = IMAGE_RIGHT;
-				}
-				LCD_SetTextColor(BackColor);
-				LCD_DrawLine(pixelY, nodeX[i+1], nodeX[i+1] - nodeX[i], LCD_DIR_HORIZONTAL);
-				LCD_SetTextColor(color);
-				osMutexWait(lcd_buffer_mutex, osWaitForever);
-					LCD_SetCursor(pixelY, nodeX[i+1]);
-					LCD_WriteRAM(TextColor);
-					LCD_SetCursor(pixelY, nodeX[i]);
-					LCD_WriteRAM(TextColor);
-				osMutexRelease(lcd_buffer_mutex);
+	    /*  Fill the pixels between node pairs. */
+	    for (i = 0; i < nodes; i+=2)
+	    {
+	      if(nodeX[i] >= IMAGE_RIGHT)
+	      {
+	        break;
+	      }
+	      if(nodeX[i+1] > IMAGE_LEFT)
+	      {
+	        if (nodeX[i] < IMAGE_LEFT)
+	        {
+	          nodeX[i]=IMAGE_LEFT;
+	        }
+	        if(nodeX[i+1] > IMAGE_RIGHT)
+	        {
+	          nodeX[i+1] = IMAGE_RIGHT;
+	        }
+	        LCD_SetTextColor(BackColor);
+	        LCD_DrawLine(pixelY, nodeX[i+1], nodeX[i+1] - nodeX[i], LCD_DIR_HORIZONTAL);
+	        LCD_SetTextColor(TextColor);
+	        PutPixel(pixelY, nodeX[i+1]);
+	        PutPixel(pixelY, nodeX[i]);
+	        /* for (j=nodeX[i]; j<nodeX[i+1]; j++) PutPixel(j,pixelY); */
+	      }
+	    }
+	  }
 
-
-				/* for (j=nodeX[i]; j<nodeX[i+1]; j++) PutPixel(j,pixelY); */
-			}
-		}
-	}
-
-	/* draw the edges */
-	LCD_SetTextColor(color);
+	  /* draw the edges */
+	  LCD_SetTextColor(TextColor);
 }
 
 /**
